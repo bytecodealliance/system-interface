@@ -1,8 +1,11 @@
 #[cfg(not(any(windows, target_os = "redox")))]
 use posish::io::fionread;
-use std::io::{self, Stdin, StdinLock};
 #[cfg(not(target_os = "redox"))]
 use std::net;
+use std::{
+    io::{self, Stdin, StdinLock},
+    process::{ChildStderr, ChildStdout},
+};
 #[cfg(windows)]
 use {
     std::{mem::MaybeUninit, os::windows::io::AsRawSocket},
@@ -106,6 +109,40 @@ impl ReadReady for os_pipe::PipeReader {
 
 #[cfg(all(windows, feature = "os_pipe"))]
 impl ReadReady for os_pipe::PipeReader {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        // Return the conservatively correct result.
+        Ok(0)
+    }
+}
+
+#[cfg(not(windows))]
+impl ReadReady for ChildStdout {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        fionread(self)
+    }
+}
+
+#[cfg(windows)]
+impl ReadReady for ChildStdout {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        // Return the conservatively correct result.
+        Ok(0)
+    }
+}
+
+#[cfg(not(windows))]
+impl ReadReady for ChildStderr {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        fionread(self)
+    }
+}
+
+#[cfg(windows)]
+impl ReadReady for ChildStderr {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
         // Return the conservatively correct result.
