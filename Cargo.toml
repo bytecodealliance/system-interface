@@ -1,0 +1,37 @@
+[package]
+name = "system-interface"
+version = "0.0.0"
+description = "Extensions to the Rust standard library"
+authors = ["Dan Gohman <sunfish@mozilla.com>"]
+license = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
+keywords = ["api", "network", "file"]
+categories = ["filesystem", "network-programming", "os"]
+repository = "https://github.com/sunfishcode/system-interface"
+edition = "2018"
+readme = "README.md"
+
+[target.'cfg(not(windows))'.dependencies]
+posish = "0.2.0"
+
+[target.'cfg(windows)'.dependencies]
+atty = "0.2.14"
+cap-std = { version = "0.3.0", optional = true }
+winapi = { version = "0.3.9", features = [
+    "winerror",
+    "winsock2",
+] }
+winx = "0.19.0"
+
+[dev-dependencies]
+cap-tempfile = "0.3.0"
+cap-std = "0.3.0"
+tempfile = "3.1.0"
+atty = "0.2.14"
+
+[features]
+default = []
+cap_std_impls = ["cap-std"]
+nightly = ["cap-std/nightly"]
+
+[badges]
+maintenance = { status = "actively-developed" }

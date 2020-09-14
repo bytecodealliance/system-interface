@@ -1,0 +1,208 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - uses: ./.github/actions/install-rust
+      with:
+        toolchain: stable
+    - run: cargo fmt --all -- --check
+
+  check_cross:
+    name: Check Cross-Compilation
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [stable, beta]
+        include:
+          - build: stable
+            os: ubuntu-latest
+            rust: stable
+          - build: beta
+            os: ubuntu-latest
+            rust: beta
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - uses: ./.github/actions/install-rust
+      with:
+        toolchain: ${{ matrix.rust }}
+    - run: >
+        rustup target add
+        x86_64-unknown-linux-musl
+        x86_64-unknown-linux-gnux32
+        x86_64-linux-android
+        x86_64-apple-darwin
+        x86_64-unknown-freebsd
+        x86_64-unknown-netbsd
+        i686-unknown-linux-gnu
+        i686-unknown-linux-musl
+        x86_64-pc-windows-msvc
+        x86_64-pc-windows-gnu
+        i686-pc-windows-msvc
+        i686-pc-windows-gnu
+        x86_64-fuchsia
+        wasm32-unknown-emscripten
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-unknown-linux-musl
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-unknown-linux-gnux32
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-linux-android
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-apple-darwin
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-unknown-freebsd
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-unknown-netbsd
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=i686-unknown-linux-gnu
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=i686-unknown-linux-musl
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-pc-windows-msvc
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-pc-windows-gnu
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=i686-pc-windows-msvc
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=i686-pc-windows-gnu
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-fuchsia
+    - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=wasm32-unknown-emscripten
+
+  check_cross_nightly:
+    name: Check Cross-Compilation on Rust nightly
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [nightly]
+        include:
+          - build: nightly
+            os: ubuntu-latest
+            rust: nightly-2020-09-21
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - uses: ./.github/actions/install-rust
+      with:
+        toolchain: ${{ matrix.rust }}
+    - run: >
+        rustup target add
+        x86_64-unknown-linux-musl
+        x86_64-unknown-linux-gnux32
+        x86_64-linux-android
+        x86_64-apple-darwin
+        x86_64-unknown-freebsd
+        x86_64-unknown-netbsd
+        i686-unknown-linux-gnu
+        i686-unknown-linux-musl
+        x86_64-pc-windows-msvc
+        x86_64-pc-windows-gnu
+        i686-pc-windows-msvc
+        i686-pc-windows-gnu
+        x86_64-fuchsia
+        wasm32-unknown-emscripten
+    - run: cargo check --workspace --all-targets --all-features --release -vv
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-unknown-linux-musl
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-unknown-linux-gnux32
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-linux-android
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-apple-darwin
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-unknown-freebsd
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-unknown-netbsd
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=i686-unknown-linux-gnu
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=i686-unknown-linux-musl
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-pc-windows-msvc
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-pc-windows-gnu
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=i686-pc-windows-msvc
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=i686-pc-windows-gnu
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=x86_64-fuchsia
+    - run: cargo check --workspace --all-targets --all-features --release -vv --target=wasm32-unknown-emscripten
+
+  test:
+    name: Test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [stable, windows, macos, beta, ubuntu-16.04, ubuntu-20.04, macos-10.15, windows-2016]
+        include:
+          - build: stable
+            os: ubuntu-latest
+            rust: stable
+          - build: windows
+            os: windows-latest
+            rust: stable
+          - build: macos
+            os: macos-latest
+            rust: stable
+          - build: beta
+            os: ubuntu-latest
+            rust: beta
+          - build: ubuntu-16.04
+            os: ubuntu-16.04
+            rust: stable
+          - build: ubuntu-20.04
+            os: ubuntu-20.04
+            rust: stable
+          - build: macos-10.15
+            os: macos-10.15
+            rust: stable
+          - build: windows-2016
+            os: windows-2016
+            rust: stable
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - uses: ./.github/actions/install-rust
+      with:
+        toolchain: ${{ matrix.rust }}
+    - run: cargo test --features cap_std_impls --workspace
+
+  test_nightly:
+    name: Test with Rust nightly
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [ubuntu, windows]
+        include:
+          - build: ubuntu
+            os: ubuntu-latest
+            rust: nightly-2020-09-21
+          - build: windows
+            os: windows-latest
+            rust: nightly-2020-09-21
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - uses: ./.github/actions/install-rust
+      with:
+        toolchain: ${{ matrix.rust }}
+    - run: cargo test --all-features --workspace
+
+  test_musl:
+    name: Test on Musl
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [ubuntu]
+        include:
+          - build: ubuntu
+            os: ubuntu-latest
+            rust: stable
+
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        submodules: true
+    - uses: ./.github/actions/install-rust
+      with:
+        toolchain: ${{ matrix.rust }}
+    - run: rustup target add x86_64-unknown-linux-musl
+    - run: cargo test --target x86_64-unknown-linux-musl --features cap_std_impls --workspace
