@@ -20,7 +20,7 @@ stay within the style of [`std`], while exposing additional functionality:
     but with both POSIX-ish and Windows support, and with additional features,
     including `read` and `write` with all combinations of `_vectored`, `_at`,
     and `_exact`/`_all`. If you've ever wanted something like
-    `read_exact_vectored_at`, `write_all_vectored_at`, or any other
+    [`read_exact_vectored_at`], [`write_all_vectored_at`], or any other
     combination, they're all here, *and* they work on Windows too!
   - [`io::IsTerminal`] - Test whether a given I/O handle refers to a terminal
     (aka a tty).
@@ -45,3 +45,5 @@ APIs are left to `cap-std`, so this crate's features are usable independently.
 [`std::fs::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
 [`std::io::Seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html
 [`std::os::unix::fs::FileExt`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html
+[`read_exact_vectored_at`]: https://docs.rs/system-interface/latest/system-interface/fs/trait.FileIoExt.html#tymethod.read_exact_vectored_at
+[`write_all_vectored_at`]: https://docs.rs/system-interface/latest/system-interface/fs/trait.FileIoExt.html#tymethod.write_all_vectored_at
