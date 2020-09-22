@@ -15,11 +15,12 @@
 `system-interface` adds extensions to the Rust standard library, seeking to
 stay within the style of [`std`], while exposing additional functionality:
 
-  - [`fs::FileIoExt`] - The features of [`std::fs::Read`], [`std::fs::Write`],
-    [`std::io::Seek`], and [`std::os::unix::fs::FileExt`] all combined,
-    but with both POSIX-ish and Windows support, and with additional features,
-    including `read` and `write` with all combinations of `_vectored`, `_at`,
-    and `_exact`/`_all`. If you've ever wanted something like
+  - [`fs::FileIoExt`] - Extra support for working with files, including
+    all the features of [`std::fs::Read`], [`std::fs::Write`],
+    [`std::io::Seek`], and [`std::os::unix::fs::FileExt`], but with both
+    POSIX-ish and Windows support, and with additional features, including
+    `read` and `write` with all combinations of `_vectored`, `_at`, and
+    `_exact`/`_all`. If you've ever wanted something like
     [`read_exact_vectored_at`], [`write_all_vectored_at`], or any other
     combination, they're all here, *and* they work on Windows too!
   - [`io::IsTerminal`] - Test whether a given I/O handle refers to a terminal
@@ -30,10 +31,11 @@ stay within the style of [`std`], while exposing additional functionality:
 Everything in this crate is portable across popular POSIX-ish platforms and
 Windows.
 
-Many of the features correspond to features in [WASI], and are designed to work
-with [`cap-std`], however it's not specific to WASI or `cap-std` and doesn't
-depend on them. To separate concerns, all sandboxing and capability-oriented
-APIs are left to `cap-std`, so this crate's features are usable independently.
+Many of `system-interface`'s features correspond to features in [WASI], and are
+designed to work with [`cap-std`], however it's not specific to WASI or
+`cap-std` and doesn't depend on them. To separate concerns, all sandboxing and
+capability-oriented APIs are left to `cap-std`, so this crate's features are
+usable independently.
 
 [`std`]: https://doc.rust-lang.org/std/
 [`cap-std`]: https://crates.io/crates/cap-std
