@@ -1,11 +1,17 @@
 use super::{as_file, into_file};
-#[cfg(not(any(windows, target_os = "macos", target_os = "ios", target_os = "netbsd")))]
+#[cfg(not(any(
+    windows,
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "redox"
+)))]
 use posish::fs::fadvise;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[cfg(any(target_os = "ios", target_os = "macos"))]
 use posish::fs::rdadvise;
 #[cfg(not(windows))]
 use posish::fs::tell;
-#[cfg(not(any(windows, target_os = "macos", target_os = "ios")))]
+#[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
 use posish::fs::{preadv, pwritev};
 #[cfg(unix)]
 use std::os::unix::{fs::FileExt, io::AsRawFd};
@@ -41,7 +47,13 @@ use {
 };
 
 /// Advice to pass to `FileIoExt::advise`.
-#[cfg(not(any(windows, target_os = "macos", target_os = "ios", target_os = "netbsd")))]
+#[cfg(not(any(
+    windows,
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "redox"
+)))]
 #[derive(Debug, Eq, PartialEq, Hash)]
 #[repr(i32)]
 pub enum Advice {
@@ -60,7 +72,13 @@ pub enum Advice {
 }
 
 /// Advice to pass to `FileIoExt::advise`.
-#[cfg(any(windows, target_os = "macos", target_os = "ios", target_os = "netbsd"))]
+#[cfg(any(
+    windows,
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "redox"
+))]
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub enum Advice {
     /// No advice; default heuristics apply.
@@ -429,7 +447,12 @@ impl<T> FileIoExt for T
 where
     T: AsRawFd,
 {
-    #[cfg(not(any(target_os = "macos", target_os = "ios", target_os = "netbsd")))]
+    #[cfg(not(any(
+        target_os = "ios",
+        target_os = "macos",
+        target_os = "netbsd",
+        target_os = "redox"
+    )))]
     #[inline]
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
         let advice = match advice {
@@ -443,7 +466,7 @@ where
         fadvise(self, offset, len, advice)
     }
 
-    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
     #[inline]
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
         // Darwin lacks `posix_fadvise`, but does have an `rdadvise` feature
@@ -460,7 +483,7 @@ where
         rdadvise(self, offset, len)
     }
 
-    #[cfg(target_os = "netbsd")]
+    #[cfg(any(target_os = "netbsd", target_os = "redox"))]
     #[inline]
     fn advise(&self, _offset: u64, _len: u64, _advice: Advice) -> io::Result<()> {
         // Netbsd lacks `posix_fadvise` and doesn't have an obvious replacement,
@@ -493,13 +516,13 @@ where
         Read::read_vectored(&mut *unsafe { as_file(self) }, bufs)
     }
 
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
     #[inline]
     fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
         preadv(self, bufs, offset)
     }
 
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
     #[inline]
     fn is_read_vectored_at(&self) -> bool {
         true
@@ -555,13 +578,13 @@ where
         Write::write_vectored(&mut *unsafe { as_file(self) }, bufs)
     }
 
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
     #[inline]
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
         pwritev(self, bufs, offset)
     }
 
-    #[cfg(not(any(target_os = "macos", target_os = "ios")))]
+    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
     #[inline]
     fn is_write_vectored_at(&self) -> bool {
         true

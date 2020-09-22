@@ -1,11 +1,10 @@
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "redox")))]
 use posish::io::fionread;
+use std::io::{self, Stdin, StdinLock};
+#[cfg(not(target_os = "redox"))]
+use std::net;
 #[cfg(target_os = "wasi")]
 use std::os::wasi::io::AsRawFd;
-use std::{
-    io::{self, Stdin, StdinLock},
-    net,
-};
 #[cfg(windows)]
 use {
     std::{mem::MaybeUninit, os::windows::io::AsRawSocket},
@@ -20,7 +19,7 @@ pub trait ReadReady {
 }
 
 /// Implement `ReadReady` for `Stdin`.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "redox")))]
 impl ReadReady for Stdin {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
@@ -29,7 +28,7 @@ impl ReadReady for Stdin {
 }
 
 /// Implement `ReadReady` for `Stdin`.
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "redox"))]
 impl ReadReady for Stdin {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
@@ -39,7 +38,7 @@ impl ReadReady for Stdin {
 }
 
 /// Implement `ReadReady` for `StdinLock`.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "redox")))]
 impl<'a> ReadReady for StdinLock<'a> {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
@@ -48,7 +47,7 @@ impl<'a> ReadReady for StdinLock<'a> {
 }
 
 /// Implement `ReadReady` for `StdinLock`.
-#[cfg(windows)]
+#[cfg(any(windows, target_os = "redox"))]
 impl<'a> ReadReady for StdinLock<'a> {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
@@ -58,7 +57,7 @@ impl<'a> ReadReady for StdinLock<'a> {
 }
 
 /// Implement `ReadReady` for `std::net::TcpStream`.
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "redox")))]
 impl ReadReady for net::TcpStream {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
