@@ -2,7 +2,7 @@
 name = "system-interface"
 version = "0.0.0"
 description = "Extensions to the Rust standard library"
-authors = ["Dan Gohman <sunfish@mozilla.com>"]
+authors = ["Dan Gohman <dev@sunfishcode.online>"]
 license = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
 keywords = ["api", "network", "file"]
 categories = ["filesystem", "network-programming", "os"]
