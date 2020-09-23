@@ -24,26 +24,11 @@ use std::{
 };
 #[cfg(windows)]
 use {
-    std::{
-        ffi::{c_void, OsString},
-        mem::{size_of, MaybeUninit},
-        os::windows::{
-            io::RawHandle,
-            {ffi::OsStringExt, fs::FileExt, io::AsRawHandle},
-        },
+    std::os::windows::{
+        fs::FileExt,
+        io::{AsRawHandle, FromRawHandle, RawHandle},
     },
-    winapi::{
-        shared::winerror::{ERROR_BUFFER_OVERFLOW, ERROR_FILE_NOT_FOUND},
-        um::{
-            fileapi::{
-                GetFileInformationByHandle, GetFinalPathNameByHandleW, BY_HANDLE_FILE_INFORMATION,
-                FILE_ID_INFO,
-            },
-            minwinbase::FileIdInfo,
-            winbase::GetFileInformationByHandleEx,
-        },
-    },
-    winx::file::WIDE_MAX_PATH,
+    winx::file::{reopen_file, AccessMode, Flags},
 };
 
 /// Advice to pass to `FileIoExt::advise`.
@@ -421,24 +406,6 @@ fn advance_mut<'a, 'b>(bufs: &'b mut [IoSliceMut<'a>], n: usize) -> &'b mut [IoS
         }
     }
     bufs
-}
-
-#[cfg(windows)]
-unsafe fn file_path(handle: RawHandle) -> io::Result<OsString> {
-    let mut raw_path: Vec<u16> = vec![0; WIDE_MAX_PATH as usize];
-
-    let read_len = GetFinalPathNameByHandleW(handle, raw_path.as_mut_ptr(), WIDE_MAX_PATH, 0);
-    if read_len == 0 {
-        return Err(io::Error::last_os_error());
-    }
-
-    // obtain a slice containing the written bytes, and check for it being too long
-    // (practically probably impossible)
-    let written_bytes = raw_path
-        .get(..read_len as usize)
-        .ok_or_else(|| io::Error::from_raw_os_error(ERROR_BUFFER_OVERFLOW as i32))?;
-
-    Ok(OsString::from_wide(written_bytes))
 }
 
 /// Implement `FileIoExt` for any type which implements `AsRawFd`.
@@ -1049,28 +1016,8 @@ fn reopen<Handle: AsRawHandle>(handle: &Handle) -> io::Result<fs::File> {
 
 #[cfg(windows)]
 unsafe fn _reopen(handle: RawHandle) -> io::Result<fs::File> {
-    let path = file_path(handle).map_err(|err| {
-        if let Some(code) = err.raw_os_error() {
-            if code == ERROR_FILE_NOT_FOUND as i32 {
-                return concurrent_rename();
-            }
-        }
-        err
-    })?;
-    let reopened = fs::File::open(path).map_err(|err| {
-        if let Some(code) = err.raw_os_error() {
-            if code == ERROR_FILE_NOT_FOUND as i32 {
-                return concurrent_rename();
-            }
-        }
-        err
-    })?;
-
-    if !is_same_file(reopened.as_raw_handle(), handle)? {
-        return Err(concurrent_rename());
-    }
-
-    Ok(reopened)
+    let new = reopen_file(handle, AccessMode::FILE_READ_DATA, Flags::empty())?;
+    Ok(fs::File::from_raw_handle(new))
 }
 
 #[cfg(windows)]
@@ -1081,71 +1028,10 @@ fn reopen_write<Handle: AsRawHandle>(handle: &Handle) -> io::Result<fs::File> {
 
 #[cfg(windows)]
 unsafe fn _reopen_write(handle: RawHandle) -> io::Result<fs::File> {
-    let path = file_path(handle).map_err(|err| {
-        if let Some(code) = err.raw_os_error() {
-            if code == ERROR_FILE_NOT_FOUND as i32 {
-                return concurrent_rename();
-            }
-        }
-        err
-    })?;
-    let reopened = fs::OpenOptions::new()
-        .write(true)
-        .open(path)
-        .map_err(|err| {
-            if let Some(code) = err.raw_os_error() {
-                if code == ERROR_FILE_NOT_FOUND as i32 {
-                    return concurrent_rename();
-                }
-            }
-            err
-        })?;
-
-    if !is_same_file(reopened.as_raw_handle(), handle)? {
-        return Err(concurrent_rename());
-    }
-
-    Ok(reopened)
-}
-
-#[cfg(windows)]
-unsafe fn is_same_file(a: RawHandle, b: RawHandle) -> io::Result<bool> {
-    Ok(get_id(a)? == get_id(b)?)
-}
-
-/// Return file information fields which uniquely identify an open file.
-#[cfg(windows)]
-unsafe fn get_id(handle: RawHandle) -> io::Result<(u32, u32, u32, u64, u128)> {
-    // It may not be necessary to get the `BY_HANDLE_FILE_INFORMATION` here,
-    // as the `FILE_ID_INFO` may be sufficient, but for now, be conservative.
-    let mut file_info = MaybeUninit::<BY_HANDLE_FILE_INFORMATION>::uninit();
-    let mut id_info = MaybeUninit::<FILE_ID_INFO>::uninit();
-
-    if GetFileInformationByHandle(handle, file_info.as_mut_ptr()) == 0
-        || GetFileInformationByHandleEx(
-            handle,
-            FileIdInfo,
-            id_info.as_mut_ptr() as *mut c_void,
-            size_of::<FILE_ID_INFO>() as u32,
-        ) == 0
-    {
-        return Err(io::Error::last_os_error());
-    }
-
-    let file_info = file_info.assume_init();
-    let id_info = id_info.assume_init();
-
-    Ok((
-        file_info.dwVolumeSerialNumber,
-        file_info.nFileIndexLow,
-        file_info.nFileIndexHigh,
-        id_info.VolumeSerialNumber,
-        u128::from_ne_bytes(id_info.FileId.Identifier),
-    ))
-}
-
-#[cfg(windows)]
-#[cold]
-fn concurrent_rename() -> io::Error {
-    io::Error::new(io::ErrorKind::Interrupted, "file was concurrently renamed")
+    let new = reopen_file(
+        handle,
+        AccessMode::FILE_WRITE_DATA | AccessMode::FILE_APPEND_DATA,
+        Flags::empty(),
+    )?;
+    Ok(fs::File::from_raw_handle(new))
 }
