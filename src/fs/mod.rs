@@ -4,8 +4,10 @@ mod file_io_ext;
 
 pub use file_io_ext::{Advice, FileIoExt};
 
-#[cfg(not(windows))]
+#[cfg(unix)]
 use std::os::unix::io::{AsRawFd, FromRawFd};
+#[cfg(target_os = "wasi")]
+use std::os::wasi::io::{AsRawFd, FromRawFd};
 #[cfg(windows)]
 use std::os::windows::io::{AsRawHandle, FromRawHandle};
 

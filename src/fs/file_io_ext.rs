@@ -15,6 +15,8 @@ use posish::fs::tell;
 use posish::fs::{preadv, pwritev};
 #[cfg(unix)]
 use std::os::unix::{fs::FileExt, io::AsRawFd};
+#[cfg(target_os = "wasi")]
+use std::os::wasi::{fs::FileExt, io::AsRawFd};
 use std::{
     convert::TryInto,
     fmt::Arguments,

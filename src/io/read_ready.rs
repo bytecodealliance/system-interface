@@ -3,8 +3,6 @@ use posish::io::fionread;
 use std::io::{self, Stdin, StdinLock};
 #[cfg(not(target_os = "redox"))]
 use std::net;
-#[cfg(target_os = "wasi")]
-use std::os::wasi::io::AsRawFd;
 #[cfg(windows)]
 use {
     std::{mem::MaybeUninit, os::windows::io::AsRawSocket},
