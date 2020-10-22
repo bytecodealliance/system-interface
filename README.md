@@ -5,10 +5,12 @@
     <strong>Extensions to the Rust standard library</strong>
   </p>
 
+  <strong>A <a href="https://bytecodealliance.org/">Bytecode Alliance</a> project</strong>
+
   <p>
-    <a href="https://github.com/sunfishcode/system-interface/actions?query=workflow%3ACI"><img src="https://github.com/sunfishcode/system-interface/workflows/CI/badge.svg" alt="Github Actions CI Status" /></a>
-    <a href="https://cirrus-ci.com/github/sunfishcode/system-interface"><img src="https://api.cirrus-ci.com/github/sunfishcode/system-interface.svg" alt="Cirrus CI Status" /></a>
-    <a href="https://travis-ci.com/sunfishcode/cap-std"><img src="https://travis-ci.com/sunfishcode/cap-std.svg?branch=main" alt="Travis CI Status" /></a>
+    <a href="https://github.com/bytecodealliance/system-interface/actions?query=workflow%3ACI"><img src="https://github.com/bytecodealliance/system-interface/workflows/CI/badge.svg" alt="Github Actions CI Status" /></a>
+    <a href="https://cirrus-ci.com/github/bytecodealliance/system-interface"><img src="https://api.cirrus-ci.com/github/bytecodealliance/system-interface.svg" alt="Cirrus CI Status" /></a>
+    <a href="https://travis-ci.com/bytecodealliance/system-interface"><img src="https://travis-ci.com/bytecodealliance/system-interface.svg?branch=main" alt="Travis CI Status" /></a>
     <a href="https://crates.io/crates/system-interface"><img src="https://img.shields.io/crates/v/system-interface.svg" alt="crates.io page" /></a>
     <a href="https://docs.rs/system-interface"><img src="https://docs.rs/system-interface/badge.svg" alt="docs.rs docs" /></a>
   </p>
