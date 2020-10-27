@@ -11,7 +11,7 @@ edition = "2018"
 readme = "README.md"
 
 [target.'cfg(not(windows))'.dependencies]
-posish = "0.4.0"
+posish = "0.4.1"
 
 [target.'cfg(windows)'.dependencies]
 atty = "0.2.14"
