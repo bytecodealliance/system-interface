@@ -11,7 +11,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -34,7 +34,7 @@ jobs:
             rust: beta
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -86,7 +86,7 @@ jobs:
             rust: nightly-2020-09-21
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -129,7 +129,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [stable, windows, macos, beta, ubuntu-16.04, ubuntu-20.04, windows-2016]
+        build: [stable, windows, macos, macos-11.0, beta, ubuntu-16.04, ubuntu-20.04, windows-2016, aarch64-ubuntu]
         include:
           - build: stable
             os: ubuntu-latest
@@ -139,6 +139,9 @@ jobs:
             rust: stable
           - build: macos
             os: macos-latest
+            rust: stable
+          - build: macos-11.0
+            os: macos-11.0
             rust: stable
           - build: beta
             os: ubuntu-latest
@@ -162,13 +165,47 @@ jobs:
             qemu_target: aarch64-linux-user
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
       with:
         toolchain: ${{ matrix.rust }}
-    - run: cargo test --features cap_std_impls --workspace
+    - name: Install cross-compilation tools
+      run: |
+        set -ex
+        sudo apt-get update
+        sudo apt-get install -y ${{ matrix.gcc_package }}
+
+        # Download and build qemu from source since the most recent release is
+        # way faster at arm emulation than the current version github actions'
+        # ubuntu image uses. Disable as much as we can to get it to build
+        # quickly.
+        curl https://download.qemu.org/qemu-5.1.0.tar.xz | tar xJf -
+        cd qemu-5.1.0
+        ./configure --target-list=${{ matrix.qemu_target }} --prefix=$HOME/qemu --disable-tools --disable-slirp --disable-fdt --disable-capstone --disable-docs
+        make -j$(nproc) install
+
+        # Configure Cargo for cross compilation and tell it how it can run
+        # cross executables
+        upcase=$(echo ${{ matrix.target }} | awk '{ print toupper($0) }' | sed 's/-/_/g')
+        echo CARGO_TARGET_${upcase}_RUNNER=$HOME/qemu/bin/${{ matrix.qemu }} >> $GITHUB_ENV
+        echo CARGO_TARGET_${upcase}_LINKER=${{ matrix.gcc }} >> $GITHUB_ENV
+      if: matrix.qemu != '' && matrix.os == 'ubuntu-latest'
+
+    - name: Native testing
+      run: cargo test --features cap_std_impls --workspace
+      env:
+        RUST_BACKTRACE: 1
+      if: matrix.target == ''
+
+    - name: Cross testing
+      run: |
+        rustup target add ${{ matrix.target }}
+        cargo test --features cap_std_impls --workspace --target=${{ matrix.target }}
+      env:
+        RUST_BACKTRACE: 1
+      if: matrix.target != ''
 
   test_nightly:
     name: Test with Rust nightly
@@ -185,7 +222,7 @@ jobs:
             rust: nightly-2020-09-21
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -205,7 +242,7 @@ jobs:
             rust: stable
 
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v2
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
