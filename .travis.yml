@@ -20,7 +20,7 @@ matrix:
       dist: precise
 
 script:
-  - cargo test --no-default-features --features=fs_utf8 --workspace
+  - cargo test --no-default-features --features=cap_std_impls --workspace
 
 notifications:
   email:
