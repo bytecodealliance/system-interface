@@ -42,12 +42,12 @@ usable independently.
 [`std`]: https://doc.rust-lang.org/std/
 [`cap-std`]: https://crates.io/crates/cap-std
 [WASI]: https://github.com/WebAssembly/WASI/
-[`fs::FileIoExt`]: https://docs.rs/system-interface/latest/system-interface/fs/trait.FileIoExt.html
-[`io::IsTerminal`]: https://docs.rs/system-interface/latest/system-interface/io/trait.IsTerminal.html
-[`io::ReadReady`]: https://docs.rs/system-interface/latest/system-interface/io/trait.ReadReady.html
+[`fs::FileIoExt`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html
+[`io::IsTerminal`]: https://docs.rs/system-interface/latest/system_interface/io/trait.IsTerminal.html
+[`io::ReadReady`]: https://docs.rs/system-interface/latest/system_interface/io/trait.ReadReady.html
 [`std::io::Read`]: https://doc.rust-lang.org/std/io/trait.Read.html
 [`std::io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
 [`std::io::Seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html
 [`std::os::unix::fs::FileExt`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html
-[`read_exact_vectored_at`]: https://docs.rs/system-interface/latest/system-interface/fs/trait.FileIoExt.html#tymethod.read_exact_vectored_at
-[`write_all_vectored_at`]: https://docs.rs/system-interface/latest/system-interface/fs/trait.FileIoExt.html#tymethod.write_all_vectored_at
+[`read_exact_vectored_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#method.read_exact_vectored_at
+[`write_all_vectored_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#tymethod.write_all_vectored_at
