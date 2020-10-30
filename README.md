@@ -50,4 +50,4 @@ usable independently.
 [`std::io::Seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html
 [`std::os::unix::fs::FileExt`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html
 [`read_exact_vectored_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#method.read_exact_vectored_at
-[`write_all_vectored_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#tymethod.write_all_vectored_at
+[`write_all_vectored_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#method.write_all_vectored_at
