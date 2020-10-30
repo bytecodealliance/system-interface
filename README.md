@@ -18,7 +18,7 @@
 stay within the style of [`std`], while exposing additional functionality:
 
   - [`fs::FileIoExt`] - Extra support for working with files, including
-    all the features of [`std::fs::Read`], [`std::fs::Write`],
+    all the features of [`std::io::Read`], [`std::io::Write`],
     [`std::io::Seek`], and [`std::os::unix::fs::FileExt`], but with both
     POSIX-ish and Windows support, and with additional features, including
     `read` and `write` with all combinations of `_vectored`, `_at`, and
@@ -45,8 +45,8 @@ usable independently.
 [`fs::FileIoExt`]: https://docs.rs/system-interface/latest/system-interface/fs/trait.FileIoExt.html
 [`io::IsTerminal`]: https://docs.rs/system-interface/latest/system-interface/io/trait.IsTerminal.html
 [`io::ReadReady`]: https://docs.rs/system-interface/latest/system-interface/io/trait.ReadReady.html
-[`std::fs::Read`]: https://doc.rust-lang.org/std/io/trait.Read.html
-[`std::fs::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
+[`std::io::Read`]: https://doc.rust-lang.org/std/io/trait.Read.html
+[`std::io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
 [`std::io::Seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html
 [`std::os::unix::fs::FileExt`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html
 [`read_exact_vectored_at`]: https://docs.rs/system-interface/latest/system-interface/fs/trait.FileIoExt.html#tymethod.read_exact_vectored_at
