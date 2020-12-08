@@ -838,6 +838,17 @@ impl FileIoExt for cap_std::fs::File {
     }
 
     #[inline]
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        // In theory we could do a `reopen` + `seek` first, allowing the OS to
+        // create a sparse file, but Windows doesn't guarantee to zero-fill.
+        // The following doesn't guarantee to make the file dense in the
+        // given range, but Windows doesn't have a simple way to do that either.
+        self.set_len(offset.checked_add(len).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, "overflow while allocating file space")
+        })?)
+    }
+
+    #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
         Read::read(&mut *unsafe { as_file(self) }, buf)
     }
