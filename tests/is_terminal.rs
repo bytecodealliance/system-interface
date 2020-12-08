@@ -10,27 +10,24 @@ use system_interface::io::IsTerminal;
 fn cap_std_file_is_not_terminal() {
     let tmpdir = tmpdir();
     check!(tmpdir.create("file"));
-    assert!(!check!(check!(tmpdir.open("file")).is_terminal()));
+    assert!(!check!(tmpdir.open("file")).is_terminal());
 }
 
 #[test]
 fn std_file_is_not_terminal() {
     let tmpdir = tempfile::tempdir().unwrap();
     check!(std::fs::File::create(tmpdir.path().join("file")));
-    assert!(!check!(check!(std::fs::File::open(
-        tmpdir.path().join("file")
-    ))
-    .is_terminal()));
+    assert!(!check!(std::fs::File::open(tmpdir.path().join("file"))).is_terminal());
 }
 
 #[test]
 fn stdout_stderr_terminals() {
     assert_eq!(
-        check!(std::io::stdout().is_terminal()),
+        std::io::stdout().is_terminal(),
         atty::is(atty::Stream::Stdout)
     );
     assert_eq!(
-        check!(std::io::stderr().is_terminal()),
+        std::io::stderr().is_terminal(),
         atty::is(atty::Stream::Stderr)
     );
 }

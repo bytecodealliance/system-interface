@@ -4,9 +4,11 @@ use super::{as_file, into_file};
     target_os = "ios",
     target_os = "macos",
     target_os = "netbsd",
-    target_os = "redox"
+    target_os = "redox",
 )))]
 use posish::fs::fadvise;
+#[cfg(not(any(windows, target_os = "netbsd", target_os = "redox")))]
+use posish::fs::posix_fallocate;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 use posish::fs::rdadvise;
 #[cfg(not(windows))]
@@ -86,6 +88,10 @@ pub enum Advice {
 pub trait FileIoExt {
     /// Announce the expected access pattern of the data at the given offset.
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()>;
+
+    /// Allocate space in the file, increasing the file size as needed, and
+    /// ensuring that there are no holes under the given range.
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()>;
 
     /// Pull some bytes from this source into the specified buffer, returning
     /// how many bytes were read.
@@ -460,6 +466,22 @@ where
         Ok(())
     }
 
+    #[cfg(not(any(target_os = "netbsd", target_os = "redox")))]
+    #[inline]
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        posix_fallocate(self, offset, len)
+    }
+
+    #[cfg(target_os = "netbsd")]
+    fn allocate(&self, _offset: u64, _len: u64) -> io::Result<()> {
+        todo!("NetBSD 7.0 supports posix_fallocate; add bindings for it")
+    }
+
+    #[cfg(target_os = "redox")]
+    fn allocate(&self, _offset: u64, _len: u64) -> io::Result<()> {
+        todo!("figure out what to do on redox for posix_fallocate")
+    }
+
     #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
         Read::read(&mut *unsafe { as_file(self) }, buf)
@@ -588,6 +610,17 @@ impl FileIoExt for fs::File {
     fn advise(&self, _offset: u64, _len: u64, _advice: Advice) -> io::Result<()> {
         // TODO: Do something with the advice.
         Ok(())
+    }
+
+    #[inline]
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        // In theory we could do a `reopen` + `seek` first, allowing the OS to
+        // create a sparse file, but Windows doesn't guarantee to zero-fill.
+        // The following doesn't guarantee to make the file dense in the
+        // given range, but Windows doesn't have a simple way to do that either.
+        self.set_len(offset.checked_add(len).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, "overflow while allocating file space")
+        })?)
     }
 
     #[inline]
@@ -802,6 +835,17 @@ impl FileIoExt for cap_std::fs::File {
     fn advise(&self, _offset: u64, _len: u64, _advice: Advice) -> io::Result<()> {
         // TODO: Do something with the advice.
         Ok(())
+    }
+
+    #[inline]
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        // In theory we could do a `reopen` + `seek` first, allowing the OS to
+        // create a sparse file, but Windows doesn't guarantee to zero-fill.
+        // The following doesn't guarantee to make the file dense in the
+        // given range, but Windows doesn't have a simple way to do that either.
+        self.set_len(offset.checked_add(len).ok_or_else(|| {
+            io::Error::new(io::ErrorKind::Other, "overflow while allocating file space")
+        })?)
     }
 
     #[inline]

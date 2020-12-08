@@ -1,6 +1,5 @@
 #[cfg(not(windows))]
 use posish::io::isatty;
-use std::io;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 #[cfg(target_os = "wasi")]
@@ -17,7 +16,7 @@ pub trait IsTerminal {
     /// Test whether this output stream is attached to a terminal.
     ///
     /// This operation is also known as `isatty`.
-    fn is_terminal(&self) -> io::Result<bool>;
+    fn is_terminal(&self) -> bool;
 }
 
 /// Implement `IsTerminal` for types that implement `AsRawFd`.
@@ -27,7 +26,7 @@ where
     T: AsRawFd,
 {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
+    fn is_terminal(&self) -> bool {
         isatty(self)
     }
 }
@@ -36,8 +35,8 @@ where
 #[cfg(windows)]
 impl IsTerminal for Stdin {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(atty::is(atty::Stream::Stdin))
+    fn is_terminal(&self) -> bool {
+        atty::is(atty::Stream::Stdin)
     }
 }
 
@@ -45,8 +44,8 @@ impl IsTerminal for Stdin {
 #[cfg(windows)]
 impl<'a> IsTerminal for StdinLock<'a> {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(atty::is(atty::Stream::Stdin))
+    fn is_terminal(&self) -> bool {
+        atty::is(atty::Stream::Stdin)
     }
 }
 
@@ -54,8 +53,8 @@ impl<'a> IsTerminal for StdinLock<'a> {
 #[cfg(windows)]
 impl IsTerminal for Stdout {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(atty::is(atty::Stream::Stdout))
+    fn is_terminal(&self) -> bool {
+        atty::is(atty::Stream::Stdout)
     }
 }
 
@@ -63,8 +62,8 @@ impl IsTerminal for Stdout {
 #[cfg(windows)]
 impl<'a> IsTerminal for StdoutLock<'a> {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(atty::is(atty::Stream::Stdout))
+    fn is_terminal(&self) -> bool {
+        atty::is(atty::Stream::Stdout)
     }
 }
 
@@ -72,8 +71,8 @@ impl<'a> IsTerminal for StdoutLock<'a> {
 #[cfg(windows)]
 impl IsTerminal for Stderr {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(atty::is(atty::Stream::Stderr))
+    fn is_terminal(&self) -> bool {
+        atty::is(atty::Stream::Stderr)
     }
 }
 
@@ -81,8 +80,8 @@ impl IsTerminal for Stderr {
 #[cfg(windows)]
 impl<'a> IsTerminal for StderrLock<'a> {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(atty::is(atty::Stream::Stderr))
+    fn is_terminal(&self) -> bool {
+        atty::is(atty::Stream::Stderr)
     }
 }
 
@@ -90,8 +89,8 @@ impl<'a> IsTerminal for StderrLock<'a> {
 #[cfg(windows)]
 impl<'a> IsTerminal for fs::File {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(false)
+    fn is_terminal(&self) -> bool {
+        false
     }
 }
 
@@ -99,8 +98,8 @@ impl<'a> IsTerminal for fs::File {
 #[cfg(windows)]
 impl<'a> IsTerminal for net::TcpStream {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(false)
+    fn is_terminal(&self) -> bool {
+        false
     }
 }
 
@@ -108,8 +107,8 @@ impl<'a> IsTerminal for net::TcpStream {
 #[cfg(all(windows, feature = "cap_std_impls"))]
 impl<'a> IsTerminal for cap_std::fs::File {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(false)
+    fn is_terminal(&self) -> bool {
+        false
     }
 }
 
@@ -117,7 +116,7 @@ impl<'a> IsTerminal for cap_std::fs::File {
 #[cfg(all(windows, feature = "cap_std_impls"))]
 impl<'a> IsTerminal for cap_std::net::TcpStream {
     #[inline]
-    fn is_terminal(&self) -> io::Result<bool> {
-        Ok(false)
+    fn is_terminal(&self) -> bool {
+        false
     }
 }
