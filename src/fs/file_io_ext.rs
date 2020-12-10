@@ -212,14 +212,6 @@ pub trait FileIoExt {
     /// [`Read::bytes`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.bytes
     fn bytes(self) -> io::Bytes<fs::File>;
 
-    /// Creates an adaptor which will chain this stream with another.
-    ///
-    /// This is similar to [`Read::chain`], except it returns a
-    /// `io::Chain<fs::File, R>` instead of an `io::Chain::<Self, R>`.
-    ///
-    /// [`Read::chain`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.chain
-    fn chain<R: Read>(self, next: R) -> io::Chain<fs::File, R>;
-
     /// Creates an adaptor which will read at most `limit` bytes from it.
     ///
     /// This is similar to [`Read::take`], except it returns a
@@ -535,11 +527,6 @@ where
     }
 
     #[inline]
-    fn chain<R: Read>(self, next: R) -> io::Chain<fs::File, R> where {
-        Read::chain(into_file(self), next)
-    }
-
-    #[inline]
     fn take(self, limit: u64) -> io::Take<fs::File> where {
         Read::take(into_file(self), limit)
     }
@@ -715,11 +702,6 @@ impl FileIoExt for fs::File {
     #[inline]
     fn bytes(self) -> io::Bytes<fs::File> where {
         Read::bytes(into_file(self))
-    }
-
-    #[inline]
-    fn chain<R: Read>(self, next: R) -> io::Chain<fs::File, R> where {
-        Read::chain(into_file(self), next)
     }
 
     #[inline]
@@ -943,11 +925,6 @@ impl FileIoExt for cap_std::fs::File {
     }
 
     #[inline]
-    fn chain<R: Read>(self, next: R) -> io::Chain<fs::File, R> where {
-        Read::chain(into_file(self), next)
-    }
-
-    #[inline]
     fn take(self, limit: u64) -> io::Take<fs::File> where {
         Read::take(into_file(self), limit)
     }
@@ -1080,4 +1057,7 @@ unsafe fn _reopen_write(handle: RawHandle) -> io::Result<fs::File> {
         Flags::empty(),
     )?;
     Ok(fs::File::from_raw_handle(new))
+}
+
+fn _file_io_ext_can_be_trait_object(_: &dyn FileIoExt) {
 }
