@@ -1059,5 +1059,4 @@ unsafe fn _reopen_write(handle: RawHandle) -> io::Result<fs::File> {
     Ok(fs::File::from_raw_handle(new))
 }
 
-fn _file_io_ext_can_be_trait_object(_: &dyn FileIoExt) {
-}
+fn _file_io_ext_can_be_trait_object(_: &dyn FileIoExt) {}
