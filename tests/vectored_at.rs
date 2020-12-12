@@ -13,14 +13,14 @@ use system_interface::fs::FileIoExt;
 #[test]
 fn cap_read_exact_vectored_at() {
     let tmpdir = tmpdir();
-    let mut file = check!(tmpdir.open_with(
+    let file = check!(tmpdir.open_with(
         "file",
         cap_std::fs::OpenOptions::new()
             .create_new(true)
             .read(true)
             .write(true)
     ));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
@@ -33,12 +33,12 @@ fn cap_read_exact_vectored_at() {
 #[test]
 fn read_exact_vectored_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
@@ -51,12 +51,12 @@ fn read_exact_vectored_at() {
 #[test]
 fn read_vectored_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
@@ -74,12 +74,12 @@ fn read_vectored_at() {
 #[test]
 fn read_exact_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     check!(file.read_exact_at(&mut buf0, 4));
@@ -92,12 +92,12 @@ fn read_exact_at() {
 #[test]
 fn read_exact_vectored() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
@@ -111,12 +111,12 @@ fn read_exact_vectored() {
 #[test]
 fn read_exact() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     check!(file.seek(std::io::SeekFrom::Start(4)));
@@ -130,12 +130,12 @@ fn read_exact() {
 #[test]
 fn read_vectored() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
@@ -154,12 +154,12 @@ fn read_vectored() {
 #[test]
 fn read_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     let nread0 = check!(file.read_at(&mut buf0, 4));
@@ -178,12 +178,12 @@ fn read_at() {
 #[test]
 fn read() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let mut buf0 = vec![0; 8];
     let mut buf1 = vec![0; 8];
     check!(file.seek(std::io::SeekFrom::Start(4)));
@@ -204,14 +204,14 @@ fn read() {
 #[test]
 fn cap_write_all_vectored_at() {
     let tmpdir = tmpdir();
-    let mut file = check!(tmpdir.open_with(
+    let file = check!(tmpdir.open_with(
         "file",
         cap_std::fs::OpenOptions::new()
             .create_new(true)
             .read(true)
             .write(true)
     ));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
@@ -226,12 +226,12 @@ fn cap_write_all_vectored_at() {
 #[test]
 fn write_all_vectored_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
@@ -246,12 +246,12 @@ fn write_all_vectored_at() {
 #[test]
 fn write_vectored_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
@@ -272,12 +272,12 @@ fn write_vectored_at() {
 #[test]
 fn write_all_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     check!(file.write_all_at(&buf0, 4));
@@ -292,12 +292,12 @@ fn write_all_at() {
 #[test]
 fn write_all_vectored() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
@@ -312,12 +312,12 @@ fn write_all_vectored() {
 #[test]
 fn write_all() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     check!(file.write_all(&buf0));
@@ -332,12 +332,12 @@ fn write_all() {
 #[test]
 fn write_vectored() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
@@ -355,12 +355,12 @@ fn write_vectored() {
 #[test]
 fn write_at() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     let nwritten0 = check!(file.write_at(&buf0, 4));
@@ -383,12 +383,12 @@ fn write_at() {
 #[test]
 fn write() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
     let nwritten0 = check!(file.write(&buf0));

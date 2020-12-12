@@ -10,19 +10,19 @@ use system_interface::fs::FileIoExt;
 #[test]
 fn live_rename() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
 
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file.upper")));
-    check!(write!(&mut file, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
+    check!(write!(&file, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
 
     let mut buf = [0u8; 8];
     let file = check!(File::open(dir.path().join("file")));
@@ -49,12 +49,12 @@ fn live_rename() {
 #[test]
 fn concurrent_rename() {
     let dir = tempfile::tempdir().unwrap();
-    let mut file = check!(OpenOptions::new()
+    let file = check!(OpenOptions::new()
         .create_new(true)
         .read(true)
         .write(true)
         .open(dir.path().join("file")));
-    check!(write!(&mut file, "abcdefghijklmnopqrstuvwxyz"));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
 
     let mut join = vec![];
 
