@@ -314,7 +314,7 @@ pub trait FileIoExt {
     /// immutable reference since the entire side effect is I/O.
     ///
     /// [`std::io::Write::write_fmt`]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write_fmt
-    fn write_fmt(&mut self, fmt: Arguments) -> io::Result<()>;
+    fn write_fmt(&self, fmt: Arguments) -> io::Result<()>;
 
     /// Flush this output stream, ensuring that all intermediately buffered contents reach their destination.
     ///
@@ -574,7 +574,7 @@ where
     }
 
     #[inline]
-    fn write_fmt(&mut self, fmt: Arguments) -> io::Result<()> {
+    fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
         Write::write_fmt(&mut *unsafe { as_file(self) }, fmt)
     }
 
@@ -794,7 +794,7 @@ impl FileIoExt for fs::File {
     }
 
     #[inline]
-    fn write_fmt(&mut self, fmt: Arguments) -> io::Result<()> {
+    fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
         Write::write_fmt(&mut *unsafe { as_file(self) }, fmt)
     }
 
@@ -1014,7 +1014,7 @@ impl FileIoExt for cap_std::fs::File {
     }
 
     #[inline]
-    fn write_fmt(&mut self, fmt: Arguments) -> io::Result<()> {
+    fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
         Write::write_fmt(&mut *unsafe { as_file(self) }, fmt)
     }
 
