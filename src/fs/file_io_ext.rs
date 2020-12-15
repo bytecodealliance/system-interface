@@ -82,7 +82,7 @@ pub enum Advice {
     NoReuse,
 }
 
-/// extension trait for `std::fs::File` and `cap_std::fs::File`.
+/// Extension trait for `std::fs::File` and `cap_std::fs::File`.
 pub trait FileIoExt {
     /// Announce the expected access pattern of the data at the given offset.
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()>;
