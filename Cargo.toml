@@ -10,9 +10,6 @@ repository = "https://github.com/bytecodealliance/system-interface"
 edition = "2018"
 readme = "README.md"
 
-[build-dependencies]
-rustc_version = "0.3.0"
-
 [target.'cfg(not(windows))'.dependencies]
 posish = "0.5.2"
 
@@ -34,7 +31,6 @@ atty = "0.2.14"
 [features]
 default = []
 cap_std_impls = ["cap-std"]
-nightly = []
 
 [badges]
 maintenance = { status = "actively-developed" }
