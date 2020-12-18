@@ -27,10 +27,8 @@ use std::{
 };
 #[cfg(windows)]
 use {
-    std::os::windows::{
-        fs::FileExt,
-        io::{AsRawHandle, FromRawHandle, RawHandle},
-    },
+    std::fs,
+    std::os::windows::io::{AsRawHandle, RawHandle},
     winx::file::{reopen_file, AccessMode, Flags},
 };
 
