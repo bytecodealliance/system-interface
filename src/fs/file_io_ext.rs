@@ -203,23 +203,6 @@ pub trait FileIoExt {
     /// [`std::io::Read::read_to_string`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.read_to_string
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize>;
 
-    /// Transforms this `FileIoExt` instance to an [`Iterator`] over its bytes.
-    ///
-    /// This is similar to [`Read::bytes`], except it returns a
-    /// `io::Bytes<fs::File>` instead of an `io::Bytes::<Self>`.
-    ///
-    /// [`Iterator`]: https://doc.rust-lang.org/std/iter/trait.Iterator.html
-    /// [`Read::bytes`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.bytes
-    fn bytes(self) -> io::Bytes<fs::File>;
-
-    /// Creates an adaptor which will read at most `limit` bytes from it.
-    ///
-    /// This is similar to [`Read::take`], except it returns a
-    /// `io::Take<fs::File>` instead of an `io::Take::<Self>`.
-    ///
-    /// [`Read::take`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.take
-    fn take(self, limit: u64) -> io::Take<fs::File>;
-
     /// Write a buffer into this writer, returning how many bytes were written.
     ///
     /// This is similar to [`std::io::Write::write`], except it takes `self` by
@@ -522,16 +505,6 @@ where
     }
 
     #[inline]
-    fn bytes(self) -> io::Bytes<fs::File> where {
-        Read::bytes(into_file(self))
-    }
-
-    #[inline]
-    fn take(self, limit: u64) -> io::Take<fs::File> where {
-        Read::take(into_file(self), limit)
-    }
-
-    #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
         Write::write(&mut *unsafe { as_file(self) }, buf)
     }
@@ -697,16 +670,6 @@ impl FileIoExt for fs::File {
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
         Read::read_to_string(&mut *unsafe { as_file(self) }, buf)
-    }
-
-    #[inline]
-    fn bytes(self) -> io::Bytes<fs::File> where {
-        Read::bytes(into_file(self))
-    }
-
-    #[inline]
-    fn take(self, limit: u64) -> io::Take<fs::File> where {
-        Read::take(into_file(self), limit)
     }
 
     #[inline]
@@ -917,16 +880,6 @@ impl FileIoExt for cap_std::fs::File {
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
         Read::read_to_string(&mut *unsafe { as_file(self) }, buf)
-    }
-
-    #[inline]
-    fn bytes(self) -> io::Bytes<fs::File> where {
-        Read::bytes(into_file(self))
-    }
-
-    #[inline]
-    fn take(self, limit: u64) -> io::Take<fs::File> where {
-        Read::take(into_file(self), limit)
     }
 
     #[inline]
