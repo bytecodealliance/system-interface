@@ -1,4 +1,4 @@
-use super::{as_file, into_file};
+use super::as_file;
 #[cfg(not(any(
     windows,
     target_os = "ios",
@@ -22,7 +22,6 @@ use std::os::wasi::{fs::FileExt, io::AsRawFd};
 use std::{
     convert::TryInto,
     fmt::Arguments,
-    fs,
     io::{self, IoSlice, IoSliceMut, Read, Seek, SeekFrom, Write},
     slice,
 };
