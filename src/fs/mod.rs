@@ -30,16 +30,6 @@ pub(crate) unsafe fn as_file(file: &impl AsRawHandle) -> std::mem::ManuallyDrop<
     std::mem::ManuallyDrop::new(std::fs::File::from_raw_handle(file.as_raw_handle()))
 }
 
-#[cfg(not(windows))]
-pub(crate) fn into_file<Fd: AsRawFd>(file: Fd) -> std::fs::File {
-    unsafe { std::fs::File::from_raw_fd(file.as_raw_fd()) }
-}
-
-#[cfg(windows)]
-pub(crate) fn into_file<Handle: AsRawHandle>(file: Handle) -> std::fs::File {
-    unsafe { std::fs::File::from_raw_handle(file.as_raw_handle()) }
-}
-
 impl crate::io::ReadReady for std::fs::File {
     #[inline]
     fn num_ready_bytes(&self) -> std::io::Result<u64> {
