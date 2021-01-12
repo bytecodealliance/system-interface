@@ -15,17 +15,17 @@ posish = "0.5.2"
 
 [target.'cfg(windows)'.dependencies]
 atty = "0.2.14"
-cap-std = { version = "0.8.0", optional = true }
+cap-std = { version = "0.9.0", optional = true }
 winapi = { version = "0.3.9", features = [
     "winerror",
     "winsock2",
 ] }
-winx = "0.21.0"
+winx = "0.22.0"
 
 [dev-dependencies]
-cap-tempfile = "0.8.0"
-cap-std = "0.8.0"
-tempfile = "3.1.0"
+cap-tempfile = "0.9.0"
+cap-std = "0.9.0"
+tempfile = "3.2.0"
 atty = "0.2.14"
 
 [features]
