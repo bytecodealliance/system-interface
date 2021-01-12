@@ -4,12 +4,7 @@ mod file_io_ext;
 
 pub use file_io_ext::{Advice, FileIoExt};
 
-#[cfg(unix)]
-use std::os::unix::io::{AsRawFd, FromRawFd};
-#[cfg(target_os = "wasi")]
-use std::os::wasi::io::{AsRawFd, FromRawFd};
-#[cfg(windows)]
-use std::os::windows::io::{AsRawHandle, FromRawHandle};
+use unsafe_io::AsUnsafeFile;
 
 // Windows quirks:
 //  - Open dir can't be renamed or deleted
@@ -20,20 +15,10 @@ use std::os::windows::io::{AsRawHandle, FromRawHandle};
 
 // TODO: poll
 
-#[cfg(not(windows))]
-pub(crate) unsafe fn as_file(file: &impl AsRawFd) -> std::mem::ManuallyDrop<std::fs::File> {
-    std::mem::ManuallyDrop::new(std::fs::File::from_raw_fd(file.as_raw_fd()))
-}
-
-#[cfg(windows)]
-pub(crate) unsafe fn as_file(file: &impl AsRawHandle) -> std::mem::ManuallyDrop<std::fs::File> {
-    std::mem::ManuallyDrop::new(std::fs::File::from_raw_handle(file.as_raw_handle()))
-}
-
 impl crate::io::ReadReady for std::fs::File {
     #[inline]
     fn num_ready_bytes(&self) -> std::io::Result<u64> {
-        let file = unsafe { as_file(self) };
+        let file = self.as_file();
         let (read, _write) = is_read_write(&*file)?;
         if read {
             let metadata = file.metadata()?;
