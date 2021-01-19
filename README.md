@@ -29,6 +29,7 @@ stay within the style of [`std`], while exposing additional functionality:
     (aka a tty).
   - [`io::ReadReady`] - Query the number of bytes ready to be read immediately
     from an I/O handle.
+  - [`io::Peek`] - Read from an I/O handle without consuming the data.
 
 Everything in this crate is portable across popular POSIX-ish platforms and
 Windows.
@@ -45,6 +46,7 @@ usable independently.
 [`fs::FileIoExt`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html
 [`io::IsTerminal`]: https://docs.rs/system-interface/latest/system_interface/io/trait.IsTerminal.html
 [`io::ReadReady`]: https://docs.rs/system-interface/latest/system_interface/io/trait.ReadReady.html
+[`io::Peek`]: https://docs.rs/system-interface/latest/system_interface/io/trait.Peek.html
 [`std::io::Read`]: https://doc.rust-lang.org/std/io/trait.Read.html
 [`std::io::Write`]: https://doc.rust-lang.org/std/io/trait.Write.html
 [`std::io::Seek`]: https://doc.rust-lang.org/std/io/trait.Seek.html
