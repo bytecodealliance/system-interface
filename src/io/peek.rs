@@ -32,7 +32,7 @@ impl Peek for File {
     }
 }
 
-#[cfg(feature = "cap_std_impls_fs_utf8")]
+#[cfg(feature = "cap_std_impls")]
 impl Peek for cap_std::fs::File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
