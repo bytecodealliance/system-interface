@@ -119,3 +119,13 @@ impl ReadReady for cap_std::fs::File {
         self.as_file_view().num_ready_bytes()
     }
 }
+
+/// Implement `ReadReady` for `cap_std::fs_utf8::File`.
+#[cfg(feature = "cap_std_impls_fs_utf8")]
+impl ReadReady for cap_std::fs_utf8::File {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        use unsafe_io::AsUnsafeFile;
+        self.as_file_view().num_ready_bytes()
+    }
+}
