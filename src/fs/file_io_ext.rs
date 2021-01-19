@@ -461,27 +461,27 @@ where
 
     #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut *self.as_file(), buf)
+        Read::read(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut *self.as_file(), buf)
+        Read::read_exact(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
-        FileExt::read_at(&*self.as_file(), buf, offset)
+        FileExt::read_at(&*self.as_file_view(), buf, offset)
     }
 
     #[inline]
     fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
-        FileExt::read_exact_at(&*self.as_file(), buf, offset)
+        FileExt::read_exact_at(&*self.as_file_view(), buf, offset)
     }
 
     #[inline]
     fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut *self.as_file(), bufs)
+        Read::read_vectored(&mut *self.as_file_view(), bufs)
     }
 
     #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
@@ -498,43 +498,43 @@ where
 
     #[inline]
     fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut *self.as_file(), buf)
+        Read::read_to_end(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut *self.as_file(), buf)
+        Read::read_to_string(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let pos = self.seek(SeekFrom::Current(0));
+        let pos = self.seek(SeekFrom::Current(0))?;
         self.read_at(buf, pos)
     }
 
     #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut *self.as_file(), buf)
+        Write::write(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut *self.as_file(), buf)
+        Write::write_all(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
-        FileExt::write_at(&*self.as_file(), buf, offset)
+        FileExt::write_at(&*self.as_file_view(), buf, offset)
     }
 
     #[inline]
     fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
-        FileExt::write_all_at(&*self.as_file(), buf, offset)
+        FileExt::write_all_at(&*self.as_file_view(), buf, offset)
     }
 
     #[inline]
     fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut *self.as_file(), bufs)
+        Write::write_vectored(&mut *self.as_file_view(), bufs)
     }
 
     #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
@@ -551,17 +551,17 @@ where
 
     #[inline]
     fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut *self.as_file())
+        Write::flush(&mut *self.as_file_view())
     }
 
     #[inline]
     fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut *self.as_file(), fmt)
+        Write::write_fmt(&mut *self.as_file_view(), fmt)
     }
 
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
-        Seek::seek(&mut *self.as_file(), pos)
+        Seek::seek(&mut *self.as_file_view(), pos)
     }
 
     #[inline]
@@ -593,12 +593,12 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut *self.as_file(), buf)
+        Read::read(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut *self.as_file(), buf)
+        Read::read_exact(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
@@ -632,7 +632,7 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut *self.as_file(), bufs)
+        Read::read_vectored(&mut *self.as_file_view(), bufs)
     }
 
     #[inline]
@@ -672,12 +672,12 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut *self.as_file(), buf)
+        Read::read_to_end(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut *self.as_file(), buf)
+        Read::read_to_string(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
@@ -688,12 +688,12 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut *self.as_file(), buf)
+        Write::write(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut *self.as_file(), buf)
+        Write::write_all(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
@@ -727,7 +727,7 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut *self.as_file(), bufs)
+        Write::write_vectored(&mut *self.as_file_view(), bufs)
     }
 
     #[inline]
@@ -767,24 +767,24 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut *self.as_file())
+        Write::flush(&mut *self.as_file_view())
     }
 
     #[inline]
     fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut *self.as_file(), fmt)
+        Write::write_fmt(&mut *self.as_file_view(), fmt)
     }
 
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
-        Seek::seek(&mut *self.as_file(), pos)
+        Seek::seek(&mut *self.as_file_view(), pos)
     }
 
     #[inline]
     fn stream_position(&self) -> io::Result<u64> {
         // This may eventually be obsoleted by [rust-lang/rust#59359].
         // [rust-lang/rust#59359]: https://github.com/rust-lang/rust/issues/59359.
-        Seek::seek(&mut *self.as_file(), SeekFrom::Current(0))
+        Seek::seek(&mut *self.as_file_view(), SeekFrom::Current(0))
     }
 }
 
@@ -809,12 +809,12 @@ impl FileIoExt for cap_std::fs::File {
 
     #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut *self.as_file(), buf)
+        Read::read(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut *self.as_file(), buf)
+        Read::read_exact(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
@@ -848,7 +848,7 @@ impl FileIoExt for cap_std::fs::File {
 
     #[inline]
     fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut *self.as_file(), bufs)
+        Read::read_vectored(&mut *self.as_file_view(), bufs)
     }
 
     #[inline]
@@ -888,22 +888,22 @@ impl FileIoExt for cap_std::fs::File {
 
     #[inline]
     fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut *self.as_file(), buf)
+        Read::read_to_end(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut *self.as_file(), buf)
+        Read::read_to_string(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut *self.as_file(), buf)
+        Write::write(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
     fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut *self.as_file(), buf)
+        Write::write_all(&mut *self.as_file_view(), buf)
     }
 
     #[inline]
@@ -937,7 +937,7 @@ impl FileIoExt for cap_std::fs::File {
 
     #[inline]
     fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut *self.as_file(), bufs)
+        Write::write_vectored(&mut *self.as_file_view(), bufs)
     }
 
     #[inline]
@@ -977,24 +977,24 @@ impl FileIoExt for cap_std::fs::File {
 
     #[inline]
     fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut *self.as_file())
+        Write::flush(&mut *self.as_file_view())
     }
 
     #[inline]
     fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut *self.as_file(), fmt)
+        Write::write_fmt(&mut *self.as_file_view(), fmt)
     }
 
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
-        Seek::seek(&mut *self.as_file(), pos)
+        Seek::seek(&mut *self.as_file_view(), pos)
     }
 
     #[inline]
     fn stream_position(&self) -> io::Result<u64> {
         // This may eventually be obsoleted by [rust-lang/rust#59359].
         // [rust-lang/rust#59359]: https://github.com/rust-lang/rust/issues/59359.
-        Seek::seek(&mut *self.as_file(), SeekFrom::Current(0))
+        Seek::seek(&mut *self.as_file_view(), SeekFrom::Current(0))
     }
 }
 

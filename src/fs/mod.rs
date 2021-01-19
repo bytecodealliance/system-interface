@@ -18,7 +18,7 @@ use unsafe_io::AsUnsafeFile;
 impl crate::io::ReadReady for std::fs::File {
     #[inline]
     fn num_ready_bytes(&self) -> std::io::Result<u64> {
-        let file = self.as_file();
+        let file = self.as_file_view();
         let (read, _write) = is_read_write(&*file)?;
         if read {
             let metadata = file.metadata()?;
