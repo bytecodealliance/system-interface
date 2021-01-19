@@ -56,11 +56,11 @@ fn concurrent_rename() {
         .open(dir.path().join("file")));
     check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
 
-    let mut join = vec![];
+    let mut joins = vec![];
 
     let path = dir.path().to_path_buf();
     let file = check!(File::open(path.join("file")));
-    join.push(thread::spawn(move || {
+    joins.push(thread::spawn(move || {
         let mut buf = [0u8; 8];
         for _ in 0..10000 {
             check!(file.read_exact_at(&mut buf, 8));
@@ -69,7 +69,7 @@ fn concurrent_rename() {
     }));
 
     let path = dir.path().to_path_buf();
-    join.push(thread::spawn(move || {
+    joins.push(thread::spawn(move || {
         let start = path.join("file");
         check!(rename(start, path.join(format!("file.{}", 0))));
         for i in 0..10000 {
@@ -80,5 +80,7 @@ fn concurrent_rename() {
         }
     }));
 
-    join.drain(..).map(|join| join.join().unwrap()).count();
+    for join in joins {
+        join.join().unwrap();
+    }
 }

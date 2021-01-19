@@ -254,8 +254,8 @@ fn write_vectored_at() {
     check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
-    let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
-    let nwritten = check!(file.write_vectored_at(&mut bufs, 4));
+    let bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
+    let nwritten = check!(file.write_vectored_at(&bufs, 4));
     assert_eq!(check!(file.stream_position()), 26);
     let mut back = String::new();
     check!(file.seek(std::io::SeekFrom::Start(0)));
@@ -340,8 +340,8 @@ fn write_vectored() {
     check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
     let buf0 = b"EFGHIJKL".to_vec();
     let buf1 = b"MNOPQRST".to_vec();
-    let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
-    let nwritten = check!(file.write_vectored(&mut bufs));
+    let bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
+    let nwritten = check!(file.write_vectored(&bufs));
     assert_eq!(check!(file.stream_position()), (26 + nwritten) as u64);
     let mut back = String::new();
     check!(file.seek(std::io::SeekFrom::Start(0)));
