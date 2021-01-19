@@ -1,7 +1,6 @@
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::{
-    cmp::min,
     fs::File,
     io::{self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, StdinLock, Take},
     net::TcpStream,
@@ -68,6 +67,7 @@ impl Peek for UnixStream {
         #[cfg(not(unix_socket_peek))]
         {
             // Return the conservatively correct value.
+            let _ = buf;
             Ok(0)
         }
     }
@@ -157,10 +157,8 @@ impl<T: BufRead, U: BufRead> Peek for Chain<T, U> {
 }
 
 /// Implement `peek` for types that implement `BufRead`.
+#[inline]
 pub fn peek_from_bufread<BR: BufRead>(buf_read: &mut BR, buf: &mut [u8]) -> io::Result<usize> {
     // Call `fill_buf` to read the bytes, but don't call `consume`.
-    let reader_buf = buf_read.fill_buf()?;
-    let len = min(buf.len(), reader_buf.len());
-    buf[..len].copy_from_slice(&reader_buf[..len]);
-    Ok(len)
+    Read::read(&mut buf_read.fill_buf()?, buf)
 }
