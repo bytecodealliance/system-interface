@@ -76,3 +76,36 @@ impl ReadReady for net::TcpStream {
         }
     }
 }
+
+#[cfg(all(not(windows), feature = "os_pipe"))]
+impl ReadReady for os_pipe::PipeReader {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        fionread(self)
+    }
+}
+
+#[cfg(all(windows, feature = "os_pipe"))]
+impl ReadReady for os_pipe::PipeReader {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        // Return the conservatively correct result.
+        Ok(0)
+    }
+}
+
+#[cfg(feature = "socketpair")]
+impl ReadReady for socketpair::SocketpairStream {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        socketpair::SocketpairStream::num_ready_bytes(self)
+    }
+}
+
+#[cfg(feature = "char-device")]
+impl ReadReady for char_device::CharDevice {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        char_device::CharDevice::num_ready_bytes(self)
+    }
+}
