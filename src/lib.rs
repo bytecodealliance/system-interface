@@ -3,6 +3,7 @@
 
 #![deny(missing_docs)]
 #![cfg_attr(target_os = "wasi", feature(wasi_ext))]
+#![cfg_attr(all(unix, unix_socket_peek), feature(unix_socket_peek))]
 
 pub mod fs;
 pub mod io;
