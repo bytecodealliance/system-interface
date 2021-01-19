@@ -40,6 +40,7 @@ atty = "0.2.14"
 [features]
 default = []
 cap_std_impls = ["cap-std"]
+cap_std_impls_fs_utf8 = ["cap-std/fs_utf8"]
 
 [badges]
 maintenance = { status = "actively-developed" }

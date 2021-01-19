@@ -916,6 +916,134 @@ impl FileIoExt for cap_std::fs::File {
     }
 }
 
+#[cfg(all(windows, feature = "cap_std_impls_fs_utf8"))]
+impl FileIoExt for cap_std::fs_utf8::File {
+    #[inline]
+    fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
+        self.as_file_view().advise(offset, len, advice)
+    }
+
+    #[inline]
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        self.as_file_view().allocate(offset, len)
+    }
+
+    #[inline]
+    fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
+        self.as_file_view().read(buf)
+    }
+
+    #[inline]
+    fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
+        self.as_file_view().read_exact(buf)
+    }
+
+    #[inline]
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
+        self.as_file_view().read_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
+        self.as_file_view().read_exact_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
+        self.as_file_view().read_vectored(bufs)
+    }
+
+    #[inline]
+    fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
+        self.as_file_view().read_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn read_exact_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<()> {
+        self.as_file_view().read_exact_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn is_read_vectored_at(&self) -> bool {
+        self.as_file_view().is_read_vectored_at()
+    }
+
+    #[inline]
+    fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
+        self.as_file_view().read_to_end(buf)
+    }
+
+    #[inline]
+    fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
+        self.as_file_view().read_to_string(buf)
+    }
+
+    #[inline]
+    fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
+        self.as_file_view().peek(buf)
+    }
+
+    #[inline]
+    fn write(&self, buf: &[u8]) -> io::Result<usize> {
+        self.as_file_view().write(buf)
+    }
+
+    #[inline]
+    fn write_all(&self, buf: &[u8]) -> io::Result<()> {
+        self.as_file_view().write_all(buf)
+    }
+
+    #[inline]
+    fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
+        self.as_file_view().write_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
+        self.as_file_view().write_all_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
+        self.as_file_view().write_vectored(bufs)
+    }
+
+    #[inline]
+    fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
+        self.as_file_view().write_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn write_all_vectored_at(&self, bufs: &mut [IoSlice], offset: u64) -> io::Result<()> {
+        self.as_file_view().write_all_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn is_write_vectored_at(&self) -> bool {
+        self.as_file_view().is_write_vectored_at()
+    }
+
+    #[inline]
+    fn flush(&self) -> io::Result<()> {
+        self.as_file_view().flush()
+    }
+
+    #[inline]
+    fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
+        self.as_file_view().write_fmt(fmt)
+    }
+
+    #[inline]
+    fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
+        self.as_file_view().seek(pos)
+    }
+
+    #[inline]
+    fn stream_position(&self) -> io::Result<u64> {
+        self.as_file_view().stream_position()
+    }
+}
+
 #[cfg(windows)]
 fn reopen<Handle: AsRawHandle>(handle: &Handle) -> io::Result<fs::File> {
     let handle = handle.as_raw_handle();
