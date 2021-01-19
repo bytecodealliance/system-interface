@@ -5,6 +5,8 @@ use std::{
     io::{self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, StdinLock, Take},
     net::TcpStream,
 };
+#[cfg(any(feature = "cap_std_impls", feature = "cap_std_impls_utf8"))]
+use unsafe_io::AsUnsafeFile;
 
 /// A trait providing the `peek` function for reading without consuming.
 ///
