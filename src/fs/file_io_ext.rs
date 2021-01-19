@@ -791,216 +791,128 @@ impl FileIoExt for fs::File {
 #[cfg(all(windows, feature = "cap_std_impls"))]
 impl FileIoExt for cap_std::fs::File {
     #[inline]
-    fn advise(&self, _offset: u64, _len: u64, _advice: Advice) -> io::Result<()> {
-        // TODO: Do something with the advice.
-        Ok(())
+    fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
+        self.as_file_view().advise(offset, len, advice)
     }
 
     #[inline]
     fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
-        // In theory we could do a `reopen` + `seek` first, allowing the OS to
-        // create a sparse file, but Windows doesn't guarantee to zero-fill.
-        // The following doesn't guarantee to make the file dense in the
-        // given range, but Windows doesn't have a simple way to do that either.
-        self.set_len(offset.checked_add(len).ok_or_else(|| {
-            io::Error::new(io::ErrorKind::Other, "overflow while allocating file space")
-        })?)
+        self.as_file_view().allocate(offset, len)
     }
 
     #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut *self.as_file_view(), buf)
+        self.as_file_view().read(buf)
     }
 
     #[inline]
     fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut *self.as_file_view(), buf)
+        self.as_file_view().read_exact(buf)
     }
 
     #[inline]
     fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
-        // Windows' `seek_read` modifies the current position in the file, so
-        // re-open the file to leave the original open file unmodified.
-        let reopened = reopen(self)?;
-        reopened.seek_read(buf, offset)
+        self.as_file_view().read_at(buf, offset)
     }
 
     #[inline]
     fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
-        // Similar to `read_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = loop {
-            match reopen(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
-        loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        }
-        reopened.read_exact(buf)
+        self.as_file_view().read_exact_at(buf, offset)
     }
 
     #[inline]
     fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut *self.as_file_view(), bufs)
+        self.as_file_view().read_vectored(bufs)
     }
 
     #[inline]
     fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
-        // Similar to `read_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = reopen(self)?;
-        reopened.seek(SeekFrom::Start(offset))?;
-        reopened.read_vectored(bufs)
+        self.as_file_view().read_vectored_at(bufs, offset)
     }
 
     #[inline]
     fn read_exact_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<()> {
-        // Similar to `read_vectored_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = loop {
-            match reopen(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
-        loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        }
-        reopened.read_exact_vectored(bufs)
+        self.as_file_view().read_exact_vectored_at(bufs, offset)
     }
 
     #[inline]
     fn is_read_vectored_at(&self) -> bool {
-        true
+        self.as_file_view().is_read_vectored_at()
     }
 
     #[inline]
     fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut *self.as_file_view(), buf)
+        self.as_file_view().read_to_end(buf)
     }
 
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut *self.as_file_view(), buf)
+        self.as_file_view().read_to_string(buf)
     }
 
     #[inline]
     fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let reopened = reopen_write(self)?;
-        reopened.read(buf)
+        self.as_file_view().peek(buf)
     }
 
     #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut *self.as_file_view(), buf)
+        self.as_file_view().write(buf)
     }
 
     #[inline]
     fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut *self.as_file_view(), buf)
+        self.as_file_view().write_all(buf)
     }
 
     #[inline]
     fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
-        // Windows' `seek_write` modifies the current position in the file, so
-        // re-open the file to leave the original open file unmodified.
-        let reopened = reopen_write(self)?;
-        reopened.seek_write(buf, offset)
+        self.as_file_view().write_at(buf, offset)
     }
 
     #[inline]
     fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
-        // Similar to `read_exact_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = loop {
-            match reopen_write(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
-        loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        }
-        reopened.write_all(buf)
+        self.as_file_view().write_all_at(buf, offset)
     }
 
     #[inline]
     fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut *self.as_file_view(), bufs)
+        self.as_file_view().write_vectored(bufs)
     }
 
     #[inline]
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
-        // Similar to `read_vectored_at`, re-open the file to avoid adjusting
-        // the current position of the already-open file.
-        let reopened = reopen_write(self)?;
-        reopened.seek(SeekFrom::Start(offset))?;
-        reopened.write_vectored(bufs)
+        self.as_file_view().write_vectored_at(bufs, offset)
     }
 
     #[inline]
     fn write_all_vectored_at(&self, bufs: &mut [IoSlice], offset: u64) -> io::Result<()> {
-        // Similar to `read_vectored_at`, re-open the file to avoid adjusting
-        // the current position of the already-open file.
-        let reopened = loop {
-            match reopen_write(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
-        loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        }
-        reopened.write_all_vectored(bufs)
+        self.as_file_view().write_all_vectored_at(bufs, offset)
     }
 
     #[inline]
     fn is_write_vectored_at(&self) -> bool {
-        true
+        self.as_file_view().is_write_vectored_at()
     }
 
     #[inline]
     fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut *self.as_file_view())
+        self.as_file_view().flush()
     }
 
     #[inline]
     fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut *self.as_file_view(), fmt)
+        self.as_file_view().write_fmt(fmt)
     }
 
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
-        Seek::seek(&mut *self.as_file_view(), pos)
+        self.as_file_view().seek(pos)
     }
 
     #[inline]
     fn stream_position(&self) -> io::Result<u64> {
-        // This may eventually be obsoleted by [rust-lang/rust#59359].
-        // [rust-lang/rust#59359]: https://github.com/rust-lang/rust/issues/59359.
-        Seek::seek(&mut *self.as_file_view(), SeekFrom::Current(0))
+        self.as_file_view().stream_position()
     }
 }
 
