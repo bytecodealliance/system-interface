@@ -109,3 +109,13 @@ impl ReadReady for char_device::CharDevice {
         char_device::CharDevice::num_ready_bytes(self)
     }
 }
+
+/// Implement `ReadReady` for `cap_std::fs::File`.
+#[cfg(feature = "cap_std_impls")]
+impl ReadReady for cap_std::fs::File {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        use unsafe_io::AsUnsafeFile;
+        self.as_file_view().num_ready_bytes()
+    }
+}
