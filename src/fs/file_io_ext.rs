@@ -897,6 +897,12 @@ impl FileIoExt for cap_std::fs::File {
     }
 
     #[inline]
+    fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
+        let reopened = reopen_write(self)?;
+        reopened.read(buf)
+    }
+
+    #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
         Write::write(&mut *self.as_file_view(), buf)
     }
