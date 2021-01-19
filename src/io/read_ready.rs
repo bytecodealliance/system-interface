@@ -31,7 +31,7 @@ impl ReadReady for Stdin {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
         // Return the conservatively correct result.
-        Ok(1)
+        Ok(0)
     }
 }
 
@@ -50,7 +50,7 @@ impl<'a> ReadReady for StdinLock<'a> {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
         // Return the conservatively correct result.
-        Ok(1)
+        Ok(0)
     }
 }
 
