@@ -201,6 +201,10 @@ pub trait FileIoExt {
     /// [`std::io::Read::read_to_string`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.read_to_string
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize>;
 
+    /// Read bytes from the current position without advancing the current
+    /// position.
+    fn peek(&self, buf: &mut [u8]) -> io::Result<usize>;
+
     /// Write a buffer into this writer, returning how many bytes were written.
     ///
     /// This is similar to [`std::io::Write::write`], except it takes `self` by
@@ -503,6 +507,12 @@ where
     }
 
     #[inline]
+    fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
+        let pos = self.seek(SeekFrom::Current(0));
+        self.read_at(buf, pos)
+    }
+
+    #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
         Write::write(&mut *self.as_file(), buf)
     }
@@ -668,6 +678,12 @@ impl FileIoExt for fs::File {
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
         Read::read_to_string(&mut *self.as_file(), buf)
+    }
+
+    #[inline]
+    fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
+        let reopened = reopen_write(self)?;
+        reopened.read(buf)
     }
 
     #[inline]
