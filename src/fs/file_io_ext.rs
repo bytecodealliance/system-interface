@@ -193,6 +193,10 @@ pub trait FileIoExt {
     /// [`std::io::Read::read_to_end`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.read_to_end
     fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize>;
 
+    /// Read all bytes, starting at `offset`, until EOF in this source, placing
+    /// them into `buf`.
+    fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize>;
+
     /// Read all bytes until EOF in this source, appending them to `buf`.
     ///
     /// This is similar to [`std::io::Read::read_to_string`], except it takes
@@ -200,6 +204,10 @@ pub trait FileIoExt {
     ///
     /// [`std::io::Read::read_to_string`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.read_to_string
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize>;
+
+    /// Read all bytes, starting at `offset`, until EOF in this source,
+    /// appending them to `buf`.
+    fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize>;
 
     /// Read bytes from the current position without advancing the current
     /// position.
@@ -502,8 +510,18 @@ where
     }
 
     #[inline]
+    fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
+        read_to_end_at(&self.as_file_view(), buf, offset)
+    }
+
+    #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
         Read::read_to_string(&mut *self.as_file_view(), buf)
+    }
+
+    #[inline]
+    fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
+        read_to_string_at(&self.as_file_view(), buf, offset)
     }
 
     #[inline]
@@ -676,8 +694,18 @@ impl FileIoExt for fs::File {
     }
 
     #[inline]
+    fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
+        read_to_end_at(self, buf, offset)
+    }
+
+    #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
         Read::read_to_string(&mut *self.as_file_view(), buf)
+    }
+
+    #[inline]
+    fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
+        read_to_string_at(self, buf, offset)
     }
 
     #[inline]
@@ -846,8 +874,18 @@ impl FileIoExt for cap_std::fs::File {
     }
 
     #[inline]
+    fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
+        read_to_end_at(&self.as_file_view(), buf, offset)
+    }
+
+    #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
         self.as_file_view().read_to_string(buf)
+    }
+
+    #[inline]
+    fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
+        read_to_string_at(&self.as_file_view(), buf, offset)
     }
 
     #[inline]
@@ -974,8 +1012,18 @@ impl FileIoExt for cap_std::fs_utf8::File {
     }
 
     #[inline]
+    fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
+        read_to_end_at(&self.as_file_view(), buf, offset)
+    }
+
+    #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
         self.as_file_view().read_to_string(buf)
+    }
+
+    #[inline]
+    fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
+        read_to_string_at(&self.as_file_view(), buf, offset)
     }
 
     #[inline]
@@ -1070,6 +1118,47 @@ unsafe fn _reopen_write(handle: RawHandle) -> io::Result<fs::File> {
         Flags::empty(),
     )?;
     Ok(fs::File::from_raw_handle(new))
+}
+
+fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
+    let len = match file.metadata()?.len().checked_sub(offset) {
+        None => return Ok(0),
+        Some(len) => len,
+    };
+
+    // This initializes the buffer with zeros which is theoretically
+    // unnecesary, but current alternatives involve tricky `unsafe` code.
+    buf.resize(
+        (buf.len() as u64)
+            .checked_add(len)
+            .unwrap_or(u64::MAX)
+            .try_into()
+            .unwrap_or(usize::MAX),
+        0u8,
+    );
+    dbg!(&buf);
+    FileIoExt::read_exact_at(file, buf, offset)?;
+    Ok(len as usize)
+}
+
+fn read_to_string_at(file: &std::fs::File, buf: &mut String, offset: u64) -> io::Result<usize> {
+    let len = match file.metadata()?.len().checked_sub(offset) {
+        None => return Ok(0),
+        Some(len) => len,
+    };
+
+    // This temporary buffer is theoretically unnecessary, but eliminating it
+    // curently involves a bunch of `unsafe`.
+    let mut tmp = vec![0u8; len.try_into().unwrap_or(usize::MAX)];
+    FileIoExt::read_exact_at(file, &mut tmp, offset)?;
+    let s = String::from_utf8(tmp).map_err(|_| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            "stream did not contain valid UTF-8",
+        )
+    })?;
+    buf.push_str(&s);
+    Ok(len as usize)
 }
 
 fn _file_io_ext_can_be_trait_object(_: &dyn FileIoExt) {}
