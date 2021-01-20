@@ -24,7 +24,8 @@ stay within the style of [`std`], while exposing additional functionality:
     `read` and `write` with all combinations of `_vectored`, `_at`, and
     `_exact`/`_all`. If you've ever wanted something like
     [`read_exact_vectored_at`], [`write_all_vectored_at`], or any other
-    combination, they're all here, *and* they work on Windows too!
+    combination, or even [`read_to_end_at`] or [`read_to_string_at`],
+    they're all here, *and* they work on Windows too!
   - [`io::IsTerminal`] - Test whether a given I/O handle refers to a terminal
     (aka a tty).
   - [`io::ReadReady`] - Query the number of bytes ready to be read immediately
@@ -53,3 +54,5 @@ usable independently.
 [`std::os::unix::fs::FileExt`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html
 [`read_exact_vectored_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#method.read_exact_vectored_at
 [`write_all_vectored_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#method.write_all_vectored_at
+[`read_to_end_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#method.read_to_end_at
+[`read_to_string_at`]: https://docs.rs/system-interface/latest/system_interface/fs/trait.FileIoExt.html#method.read_to_string_at
