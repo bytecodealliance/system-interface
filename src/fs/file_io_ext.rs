@@ -26,12 +26,7 @@ use std::{
 };
 use unsafe_io::AsUnsafeFile;
 #[cfg(windows)]
-use {
-    std::fs,
-    std::os::windows::fs::FileExt,
-    std::os::windows::io::{AsRawHandle, FromRawHandle, RawHandle},
-    winx::file::{reopen_file, AccessMode, Flags},
-};
+use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt, unsafe_io::UnsafeFile};
 
 /// Advice to pass to `FileIoExt::advise`.
 #[cfg(not(any(
@@ -1093,31 +1088,31 @@ impl FileIoExt for cap_std::fs_utf8::File {
 }
 
 #[cfg(windows)]
-fn reopen<Handle: AsRawHandle>(handle: &Handle) -> io::Result<fs::File> {
-    let handle = handle.as_raw_handle();
-    unsafe { _reopen(handle) }
+#[inline]
+fn reopen<AUF: AsUnsafeFile>(as_auf: &AUF) -> io::Result<fs::File> {
+    let unsafe_file = as_auf.as_unsafe_file();
+    unsafe { _reopen(unsafe_file) }
 }
 
 #[cfg(windows)]
-unsafe fn _reopen(handle: RawHandle) -> io::Result<fs::File> {
-    let new = reopen_file(handle, AccessMode::FILE_READ_DATA, Flags::empty())?;
-    Ok(fs::File::from_raw_handle(new))
+unsafe fn _reopen(unsafe_file: UnsafeFile) -> io::Result<fs::File> {
+    unsafe_file
+        .as_file_view()
+        .reopen(cap_fs_ext::OpenOptions::new().read(true))
 }
 
 #[cfg(windows)]
-fn reopen_write<Handle: AsRawHandle>(handle: &Handle) -> io::Result<fs::File> {
-    let handle = handle.as_raw_handle();
-    unsafe { _reopen_write(handle) }
+#[inline]
+fn reopen_write<AUF: AsUnsafeFile>(as_auf: &AUF) -> io::Result<fs::File> {
+    let unsafe_file = as_auf.as_unsafe_file();
+    unsafe { _reopen_write(unsafe_file) }
 }
 
 #[cfg(windows)]
-unsafe fn _reopen_write(handle: RawHandle) -> io::Result<fs::File> {
-    let new = reopen_file(
-        handle,
-        AccessMode::FILE_WRITE_DATA | AccessMode::FILE_APPEND_DATA,
-        Flags::empty(),
-    )?;
-    Ok(fs::File::from_raw_handle(new))
+unsafe fn _reopen_write(unsafe_file: UnsafeFile) -> io::Result<fs::File> {
+    unsafe_file
+        .as_file_view()
+        .reopen(cap_fs_ext::OpenOptions::new().write(true))
 }
 
 fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
@@ -1136,7 +1131,6 @@ fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::R
             .unwrap_or(usize::MAX),
         0u8,
     );
-    dbg!(&buf);
     FileIoExt::read_exact_at(file, buf, offset)?;
     Ok(len as usize)
 }

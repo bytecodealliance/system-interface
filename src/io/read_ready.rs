@@ -64,6 +64,25 @@ impl ReadReady for net::TcpStream {
 }
 
 /// Implement `ReadReady` for `std::net::TcpStream`.
+#[cfg(target_os = "redox")]
+impl ReadReady for net::TcpStream {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        // Return the conservatively correct result.
+        Ok(0)
+    }
+}
+
+/// Implement `ReadReady` for `std::os::unix::net::UnixStream`.
+#[cfg(unix)]
+impl ReadReady for std::os::unix::net::UnixStream {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        fionread(self)
+    }
+}
+
+/// Implement `ReadReady` for `std::net::TcpStream`.
 #[cfg(windows)]
 impl ReadReady for net::TcpStream {
     #[inline]
