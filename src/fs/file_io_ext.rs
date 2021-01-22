@@ -26,7 +26,10 @@ use std::{
 };
 use unsafe_io::AsUnsafeFile;
 #[cfg(windows)]
-use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt, unsafe_io::UnsafeFile};
+use {
+    cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt, unsafe_io::UnsafeFile,
+    winapi::shared::winerror::ERROR_SHARING_VIOLATION,
+};
 
 /// Advice to pass to `FileIoExt::advise`.
 #[cfg(not(any(
@@ -614,33 +617,44 @@ impl FileIoExt for fs::File {
         Read::read_exact(&mut *self.as_file_view(), buf)
     }
 
-    #[inline]
     fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
         // Windows' `seek_read` modifies the current position in the file, so
-        // re-open the file to leave the original open file unmodified.
-        let reopened = reopen(self)?;
-        reopened.seek_read(buf, offset)
+        // re-open the file to leave the original file position unmodified.
+        match reopen(self) {
+            Ok(reopened) => reopened.seek_read(buf, offset),
+            Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                // Reopen failed; fall back to using mmap.
+                let map = unsafe { map(offset, buf.len(), self) }?;
+                Read::read(&mut map.as_ref(), buf)
+            }
+            Err(err) => Err(err),
+        }
     }
 
-    #[inline]
     fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
         // Similar to `read_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = loop {
-            match reopen(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
+        // leave the original file position unmodified.
         loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
+            match reopen(self) {
+                Ok(reopened) => {
+                    loop {
+                        match reopened.seek(SeekFrom::Start(offset)) {
+                            Ok(_) => break,
+                            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                            Err(err) => return Err(err),
+                        }
+                    }
+                    return reopened.read_exact(buf);
+                }
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                    // Reopen failed; fall back to using mmap.
+                    let map = unsafe { map(offset, buf.len(), self) }?;
+                    return Read::read_exact(&mut map.as_ref(), buf);
+                }
                 Err(err) => return Err(err),
             }
         }
-        reopened.read_exact(buf)
     }
 
     #[inline]
@@ -648,34 +662,58 @@ impl FileIoExt for fs::File {
         Read::read_vectored(&mut *self.as_file_view(), bufs)
     }
 
-    #[inline]
     fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
         // Similar to `read_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = reopen(self)?;
-        reopened.seek(SeekFrom::Start(offset))?;
-        reopened.read_vectored(bufs)
+        // leave the original file position unmodified.
+        match reopen(self) {
+            Ok(reopened) => {
+                reopened.seek(SeekFrom::Start(offset))?;
+                reopened.read_vectored(bufs)
+            }
+            Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                // Reopen failed; fall back to using mmap.
+                let len = vectored_map_len_mut(bufs);
+                let map = unsafe { map(offset, len, self) }?;
+                Read::read_vectored(&mut map.as_ref(), bufs)
+            }
+            Err(err) => Err(err),
+        }
     }
 
-    #[inline]
-    fn read_exact_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<()> {
+    fn read_exact_vectored_at(&self, mut bufs: &mut [IoSliceMut], offset: u64) -> io::Result<()> {
         // Similar to `read_vectored_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = loop {
-            match reopen(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
+        // leave the original file position unmodified.
         loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
+            match reopen(self) {
+                Ok(reopened) => {
+                    loop {
+                        match reopened.seek(SeekFrom::Start(offset)) {
+                            Ok(_) => break,
+                            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                            Err(err) => return Err(err),
+                        }
+                    }
+                    return reopened.read_exact_vectored(bufs);
+                }
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                    // Reopen failed; fall back to using mmap.
+                    let len = vectored_map_len_mut(bufs);
+                    let map = unsafe { map(offset, len, self) }?;
+                    let mut slice = map.as_ref();
+                    while !bufs.is_empty() {
+                        match Read::read_vectored(&mut slice, bufs) {
+                            Ok(0) => break,
+                            Ok(nread) => bufs = advance_mut(bufs, nread),
+                            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    return Ok(());
+                }
                 Err(err) => return Err(err),
             }
         }
-        reopened.read_exact_vectored(bufs)
     }
 
     #[inline]
@@ -705,8 +743,16 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let reopened = reopen_write(self)?;
-        reopened.read(buf)
+        match reopen(self) {
+            Ok(reopened) => reopened.read(buf),
+            Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                // Reopen failed; fall back to using mmap.
+                let offset = self.seek(SeekFrom::Current(0))?;
+                let map = unsafe { map(offset, buf.len(), self) }?;
+                Read::read(&mut map.as_ref(), buf)
+            }
+            Err(err) => Err(err),
+        }
     }
 
     #[inline]
@@ -719,33 +765,44 @@ impl FileIoExt for fs::File {
         Write::write_all(&mut *self.as_file_view(), buf)
     }
 
-    #[inline]
     fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
         // Windows' `seek_write` modifies the current position in the file, so
-        // re-open the file to leave the original open file unmodified.
-        let reopened = reopen_write(self)?;
-        reopened.seek_write(buf, offset)
+        // re-open the file to leave the original file position unmodified.
+        match reopen_write(self) {
+            Ok(reopened) => reopened.seek_write(buf, offset),
+            Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                // Reopen failed; fall back to using mmap.
+                let mut map = unsafe { map_mut(offset, buf.len(), self) }?;
+                Write::write(&mut map.as_mut(), buf)
+            }
+            Err(err) => Err(err),
+        }
     }
 
-    #[inline]
     fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
         // Similar to `read_exact_at`, re-open the file so that we can do a seek and
-        // leave the original file unmodified.
-        let reopened = loop {
-            match reopen_write(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
+        // leave the original file position unmodified.
         loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
+            match reopen_write(self) {
+                Ok(reopened) => {
+                    loop {
+                        match reopened.seek(SeekFrom::Start(offset)) {
+                            Ok(_) => break,
+                            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                            Err(err) => return Err(err),
+                        }
+                    }
+                    return reopened.write_all(buf);
+                }
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                    // Reopen failed; fall back to using mmap.
+                    let mut map = unsafe { map_mut(offset, buf.len(), self) }?;
+                    return Write::write_all(&mut map.as_mut(), buf);
+                }
                 Err(err) => return Err(err),
             }
         }
-        reopened.write_all(buf)
     }
 
     #[inline]
@@ -753,34 +810,58 @@ impl FileIoExt for fs::File {
         Write::write_vectored(&mut *self.as_file_view(), bufs)
     }
 
-    #[inline]
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
         // Similar to `read_vectored_at`, re-open the file to avoid adjusting
         // the current position of the already-open file.
-        let reopened = reopen_write(self)?;
-        reopened.seek(SeekFrom::Start(offset))?;
-        reopened.write_vectored(bufs)
+        match reopen_write(self) {
+            Ok(reopened) => {
+                reopened.seek(SeekFrom::Start(offset))?;
+                reopened.write_vectored(bufs)
+            }
+            Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                // Reopen failed; fall back to using mmap.
+                let len = vectored_map_len(bufs);
+                let mut map = unsafe { map_mut(offset, len, self) }?;
+                Write::write_vectored(&mut map.as_mut(), bufs)
+            }
+            Err(err) => Err(err),
+        }
     }
 
-    #[inline]
-    fn write_all_vectored_at(&self, bufs: &mut [IoSlice], offset: u64) -> io::Result<()> {
+    fn write_all_vectored_at(&self, mut bufs: &mut [IoSlice], offset: u64) -> io::Result<()> {
         // Similar to `read_vectored_at`, re-open the file to avoid adjusting
         // the current position of the already-open file.
-        let reopened = loop {
-            match reopen_write(self) {
-                Ok(file) => break file,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
-        };
         loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
+            match reopen_write(self) {
+                Ok(reopened) => {
+                    loop {
+                        match reopened.seek(SeekFrom::Start(offset)) {
+                            Ok(_) => break,
+                            Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                            Err(err) => return Err(err),
+                        }
+                    }
+                    return reopened.write_all_vectored(bufs);
+                }
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
+                Err(err) if err.raw_os_error() == Some(ERROR_SHARING_VIOLATION as i32) => {
+                    // Reopen failed; fall back to using mmap.
+                    let len = vectored_map_len(bufs);
+                    let mut map = unsafe { map_mut(offset, len, self) }?;
+                    let mut slice = map.as_mut();
+                    while !bufs.is_empty() {
+                        match Write::write_vectored(&mut slice, bufs) {
+                            Ok(0) => break,
+                            Ok(nread) => bufs = advance(bufs, nread),
+                            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
+                            Err(e) => return Err(e),
+                        }
+                    }
+                    return Ok(());
+                }
                 Err(err) => return Err(err),
             }
         }
-        reopened.write_all_vectored(bufs)
     }
 
     #[inline]
@@ -1153,6 +1234,33 @@ fn read_to_string_at(file: &std::fs::File, buf: &mut String, offset: u64) -> io:
     })?;
     buf.push_str(&s);
     Ok(len as usize)
+}
+
+#[cfg(windows)]
+unsafe fn map(offset: u64, len: usize, file: &fs::File) -> io::Result<mapr::Mmap> {
+    mapr::MmapOptions::new().offset(offset).len(len).map(file)
+}
+
+#[cfg(windows)]
+unsafe fn map_mut(offset: u64, len: usize, file: &fs::File) -> io::Result<mapr::MmapMut> {
+    mapr::MmapOptions::new()
+        .offset(offset)
+        .len(len)
+        .map_mut(file)
+}
+
+#[cfg(windows)]
+fn vectored_map_len<'a>(bufs: &[IoSlice<'a>]) -> usize {
+    bufs.iter()
+        .map(|buf| buf.len())
+        .fold(0, |sum, x| sum.saturating_add(x))
+}
+
+#[cfg(windows)]
+fn vectored_map_len_mut<'a>(bufs: &[IoSliceMut<'a>]) -> usize {
+    bufs.iter()
+        .map(|buf| buf.len())
+        .fold(0, |sum, x| sum.saturating_add(x))
 }
 
 fn _file_io_ext_can_be_trait_object(_: &dyn FileIoExt) {}
