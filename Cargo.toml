@@ -23,7 +23,7 @@ char-device = { version = "0.0.0", optional = true }
 unsafe-io = "0.2.0"
 
 [target.'cfg(not(windows))'.dependencies]
-posish = "0.5.7"
+posish = "0.5.9"
 
 [target.'cfg(windows)'.dependencies]
 atty = "0.2.14"
