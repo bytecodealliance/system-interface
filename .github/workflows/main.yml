@@ -89,7 +89,7 @@ jobs:
         include:
           - build: nightly
             os: ubuntu-latest
-            rust: nightly-2020-09-21
+            rust: nightly
 
     steps:
     - uses: actions/checkout@v2
@@ -222,10 +222,10 @@ jobs:
         include:
           - build: ubuntu
             os: ubuntu-latest
-            rust: nightly-2020-09-21
+            rust: nightly
           - build: windows
             os: windows-latest
-            rust: nightly-2020-09-21
+            rust: nightly
 
     steps:
     - uses: actions/checkout@v2
