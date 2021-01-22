@@ -24,7 +24,7 @@ fn live_rename() {
         .open(dir.path().join("file.upper")));
     check!(write!(&file, "ABCDEFGHIJKLMNOPQRSTUVWXYZ"));
 
-    let mut buf = [0u8; 8];
+    let mut buf = [0_u8; 8];
     let file = check!(File::open(dir.path().join("file")));
     check!(file.read_exact_at(&mut buf, 8));
     assert_eq!(&buf, b"ijklmnop");
@@ -61,7 +61,7 @@ fn concurrent_rename() {
     let path = dir.path().to_path_buf();
     let file = check!(File::open(path.join("file")));
     joins.push(thread::spawn(move || {
-        let mut buf = [0u8; 8];
+        let mut buf = [0_u8; 8];
         for _ in 0..10000 {
             check!(file.read_exact_at(&mut buf, 8));
             assert_eq!(&buf, b"ijklmnop");

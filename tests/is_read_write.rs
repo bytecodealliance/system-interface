@@ -51,7 +51,7 @@ fn file_is_read_write() {
 
 #[test]
 fn socket_is_read_write() {
-    let pair = Arc::new((Mutex::new(0u16), Condvar::new()));
+    let pair = Arc::new((Mutex::new(0_u16), Condvar::new()));
     let pair_clone = Arc::clone(&pair);
 
     let _t = thread::spawn(move || {
@@ -87,7 +87,7 @@ fn socket_is_read_write() {
 
 #[test]
 fn socket_is_write_read() {
-    let pair = Arc::new((Mutex::new(0u16), Condvar::new()));
+    let pair = Arc::new((Mutex::new(0_u16), Condvar::new()));
     let pair_clone = Arc::clone(&pair);
 
     let _t = thread::spawn(move || {

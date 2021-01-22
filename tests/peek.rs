@@ -7,7 +7,7 @@ use system_interface::io::Peek;
 #[test]
 fn test_peek() {
     let mut input = Cursor::new("hello".to_string());
-    let mut buf = vec![0u8; 20];
+    let mut buf = vec![0_u8; 20];
 
     // Do a peek.
     assert_eq!(Peek::peek(&mut input, &mut buf).unwrap(), 5);

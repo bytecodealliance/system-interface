@@ -1129,7 +1129,7 @@ fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::R
             .unwrap_or(u64::MAX)
             .try_into()
             .unwrap_or(usize::MAX),
-        0u8,
+        0_u8,
     );
     FileIoExt::read_exact_at(file, buf, offset)?;
     Ok(len as usize)
@@ -1143,7 +1143,7 @@ fn read_to_string_at(file: &std::fs::File, buf: &mut String, offset: u64) -> io:
 
     // This temporary buffer is theoretically unnecessary, but eliminating it
     // curently involves a bunch of `unsafe`.
-    let mut tmp = vec![0u8; len.try_into().unwrap_or(usize::MAX)];
+    let mut tmp = vec![0_u8; len.try_into().unwrap_or(usize::MAX)];
     FileIoExt::read_exact_at(file, &mut tmp, offset)?;
     let s = String::from_utf8(tmp).map_err(|_| {
         io::Error::new(
