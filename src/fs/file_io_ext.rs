@@ -595,13 +595,18 @@ impl FileIoExt for fs::File {
 
     #[inline]
     fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        let len = self.metadata()?.len();
         // In theory we could do a `reopen` + `seek` first, allowing the OS to
         // create a sparse file, but Windows doesn't guarantee to zero-fill.
         // The following doesn't guarantee to make the file dense in the
         // given range, but Windows doesn't have a simple way to do that either.
-        self.set_len(offset.checked_add(len).ok_or_else(|| {
+        let allocated_len = offset.checked_add(len).ok_or_else(|| {
             io::Error::new(io::ErrorKind::Other, "overflow while allocating file space")
-        })?)
+        })?;
+        if allocated_len > len {
+            self.set_len(allocated_len)?;
+        }
+        Ok(())
     }
 
     #[inline]
