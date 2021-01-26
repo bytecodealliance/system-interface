@@ -1,9 +1,11 @@
 //! Filesystem extension traits.
 
+mod fd_flags;
 mod file_io_ext;
 
 use crate::io::IsReadWrite;
 
+pub use fd_flags::{FdFlags, GetSetFdFlags};
 pub use file_io_ext::{Advice, FileIoExt};
 
 // Windows quirks:
