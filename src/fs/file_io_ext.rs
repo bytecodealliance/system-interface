@@ -594,7 +594,7 @@ impl FileIoExt for fs::File {
     }
 
     #[inline]
-    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+    fn allocate(&self, _offset: u64, _len: u64) -> io::Result<()> {
         // We can't faithfully support allocate on Windows without exposing race conditions.
         // Instead, refuse:
         Err(io::Error::new(
