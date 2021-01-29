@@ -125,7 +125,7 @@ impl IsReadWrite for cap_async_std::net::TcpStream {
 #[cfg(windows)]
 #[inline]
 fn file_is_read_write(file: &std::fs::File) -> std::io::Result<(bool, bool)> {
-    cap_fs_ext::IsReadWrite::is_read_write(file)
+    cap_fs_ext::IsFileReadWrite::is_file_read_write(file)
 }
 
 #[cfg(windows)]
