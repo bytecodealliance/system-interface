@@ -77,7 +77,7 @@ fn socket_is_read_write() {
         port = cvar.wait(port).unwrap();
     }
 
-    let stream = TcpStream::connect(format!("localhost:{}", *port)).unwrap();
+    let stream = TcpStream::connect(("localhost", *port)).unwrap();
     assert_eq!(stream.is_read_write().unwrap(), (true, true));
     stream.shutdown(Shutdown::Read).unwrap();
     assert_eq!(stream.is_read_write().unwrap(), (false, true));
@@ -113,7 +113,7 @@ fn socket_is_write_read() {
         port = cvar.wait(port).unwrap();
     }
 
-    let stream = TcpStream::connect(format!("localhost:{}", *port)).unwrap();
+    let stream = TcpStream::connect(("localhost", *port)).unwrap();
     assert_eq!(stream.is_read_write().unwrap(), (true, true));
     stream.shutdown(Shutdown::Write).unwrap();
     assert_eq!(stream.is_read_write().unwrap(), (true, false));
