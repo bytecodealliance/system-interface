@@ -158,6 +158,14 @@ impl ReadReady for socketpair::SocketpairStream {
     }
 }
 
+#[cfg(feature = "ssh2")]
+impl ReadReady for ssh2::Channel {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        Ok(u64::from(self.read_window().available))
+    }
+}
+
 #[cfg(feature = "char-device")]
 impl ReadReady for char_device::CharDevice {
     #[inline]
