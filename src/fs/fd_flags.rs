@@ -5,8 +5,10 @@ use std::io;
 use unsafe_io::AsUnsafeFile;
 #[cfg(windows)]
 use {
+    cap_fs_ext::{OpenOptions, Reopen},
+    std::os::windows::fs::OpenOptionsExt,
     std::os::windows::io::AsRawHandle,
-    unsafe_io::{FromUnsafeFile, UnsafeFile},
+    unsafe_io::FromUnsafeFile,
     winapi::um::winbase::FILE_FLAG_WRITE_THROUGH,
     winx::file::{AccessMode, FileModeInformation},
 };
@@ -49,7 +51,7 @@ bitflags! {
 impl<T: AsUnsafeFile> GetSetFdFlags for T {
     fn get_fd_flags(&self) -> io::Result<FdFlags> {
         let mut fd_flags = FdFlags::empty();
-        let flags = getfl(&self.as_unsafe_file())?;
+        let flags = getfl(self)?;
 
         fd_flags.set(FdFlags::APPEND, flags.contains(OFlags::APPEND));
         fd_flags.set(FdFlags::DSYNC, flags.contains(OFlags::DSYNC));
@@ -90,7 +92,7 @@ impl<T: AsUnsafeFile> GetSetFdFlags for T {
             ));
         }
 
-        setfl(&self.as_unsafe_file(), flags)
+        setfl(self, flags)
     }
 }
 
@@ -143,13 +145,11 @@ impl<T: AsUnsafeFile + FromUnsafeFile> GetSetFdFlags for T {
             access_mode.contains(AccessMode::FILE_WRITE_DATA)
                 | access_mode.contains(AccessMode::FILE_APPEND_DATA),
         );
-        let new_handle = winx::file::reopen_file(
-            handle,
-            new_access_mode,
-            winx::file::Flags::from_bits(flags).unwrap(),
-        )?;
-        let unsafe_file = UnsafeFile::from_raw_handle(new_handle);
-        *self = unsafe { T::from_unsafe_file(unsafe_file) };
+        let mut options = OpenOptions::new();
+        options.access_mode(new_access_mode.bits());
+        options.custom_flags(flags);
+        let reopened = self.as_file_view().reopen(&options)?;
+        *self = T::from_filelike(reopened);
         Ok(())
     }
 }

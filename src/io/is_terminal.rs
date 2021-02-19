@@ -1,15 +1,13 @@
 #[cfg(not(windows))]
 use posish::io::isatty;
-#[cfg(unix)]
-use std::os::unix::io::AsRawFd;
-#[cfg(target_os = "wasi")]
-use std::os::wasi::io::AsRawFd;
 #[cfg(windows)]
 use std::{
     fs,
     io::{Stderr, StderrLock, Stdin, StdinLock, Stdout, StdoutLock},
     net,
 };
+#[cfg(not(windows))]
+use unsafe_io::AsUnsafeHandle;
 
 /// Extension for I/O handles which may or may not be terminals.
 pub trait IsTerminal {
@@ -23,7 +21,7 @@ pub trait IsTerminal {
 #[cfg(not(windows))]
 impl<T> IsTerminal for T
 where
-    T: AsRawFd,
+    T: AsUnsafeHandle,
 {
     #[inline]
     fn is_terminal(&self) -> bool {

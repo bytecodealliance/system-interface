@@ -1,10 +1,6 @@
 #[cfg(not(windows))]
 use posish::io::is_read_write;
 use std::io;
-#[cfg(unix)]
-use std::os::unix::io::AsRawFd;
-#[cfg(target_os = "wasi")]
-use std::os::wasi::io::AsRawFd;
 #[cfg(all(
     windows,
     any(
@@ -15,6 +11,8 @@ use std::os::wasi::io::AsRawFd;
     )
 ))]
 use unsafe_io::AsUnsafeFile;
+#[cfg(not(windows))]
+use unsafe_io::AsUnsafeHandle;
 #[cfg(feature = "async_std")]
 use unsafe_io::{FromUnsafeFile, IntoUnsafeFile};
 #[cfg(windows)]
@@ -35,7 +33,7 @@ pub trait IsReadWrite {
 }
 
 #[cfg(not(windows))]
-impl<T: AsRawFd> IsReadWrite for T {
+impl<T: AsUnsafeHandle> IsReadWrite for T {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
         is_read_write(self)

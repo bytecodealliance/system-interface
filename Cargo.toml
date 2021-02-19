@@ -16,12 +16,12 @@ rustc_version = "0.3.0"
 [dependencies]
 async-std = { version = "1.9.0", optional = true }
 bitflags = "1.2.1"
-cap-std = { version = "0.13.0", optional = true }
-cap-async-std = { version = "0.13.0", optional = true }
-char-device = { version = "0.1.0", optional = true }
+cap-std = { version = "0.13.4", optional = true }
+cap-async-std = { version = "0.13.4", optional = true }
+char-device = { version = "0.2.0", optional = true }
 os_pipe = { version = "0.9.2", optional = true }
-socketpair = { version = "0.4.0", optional = true }
-unsafe-io = "0.3.0"
+socketpair = { version = "0.5.0", optional = true }
+unsafe-io = "0.5.1"
 ssh2 = { version = "0.9.1", optional = true }
 
 [target.'cfg(not(windows))'.dependencies]
@@ -29,26 +29,27 @@ posish = "0.5.9"
 
 [target.'cfg(windows)'.dependencies]
 atty = "0.2.14"
-cap-fs-ext = "0.13.0"
+cap-fs-ext = "0.13.4"
 winapi = { version = "0.3.9", features = [
     "winerror",
     "winsock2",
 ] }
-winx = "0.22.0"
+winx = "0.23.0"
 
 [dev-dependencies]
-cap-fs-ext = "0.13.0"
-cap-tempfile = "0.13.0"
-cap-std = "0.13.0"
+cap-fs-ext = "0.13.4"
+cap-tempfile = "0.13.4"
+cap-std = "0.13.4"
 tempfile = "3.2.0"
 atty = "0.2.14"
 
 [features]
 default = []
 cap_std_impls = ["cap-std"]
-cap_async_std_impls = ["async-std", "cap-async-std"]
+cap_async_std_impls = ["async-std", "cap-async-std", "unsafe-io/async-std"]
 cap_std_impls_fs_utf8 = ["cap-std/fs_utf8"]
 cap_async_std_impls_fs_utf8 = ["async-std", "cap-async-std/fs_utf8"]
+use_os_pipe = ["os_pipe", "unsafe-io/os_pipe"]
 
 [badges]
 maintenance = { status = "actively-developed" }
