@@ -10,14 +10,8 @@ use posish::fs::fadvise;
 use posish::fs::posix_fallocate;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 use posish::fs::rdadvise;
-#[cfg(not(windows))]
-use posish::fs::tell;
 #[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
 use posish::fs::{preadv, pwritev};
-#[cfg(unix)]
-use std::os::unix::{fs::FileExt, io::AsRawFd};
-#[cfg(target_os = "wasi")]
-use std::os::wasi::{fs::FileExt, io::AsRawFd};
 use std::{
     convert::TryInto,
     fmt::Arguments,
@@ -26,7 +20,9 @@ use std::{
 };
 use unsafe_io::AsUnsafeFile;
 #[cfg(windows)]
-use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt, unsafe_io::UnsafeFile};
+use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt};
+#[cfg(not(windows))]
+use {posish::fs::tell, posish::fs::FileExt};
 
 /// Advice to pass to `FileIoExt::advise`.
 #[cfg(not(any(
@@ -400,7 +396,7 @@ fn advance_mut<'a, 'b>(bufs: &'b mut [IoSliceMut<'a>], n: usize) -> &'b mut [IoS
 #[cfg(not(windows))]
 impl<T> FileIoExt for T
 where
-    T: AsRawFd,
+    T: AsUnsafeFile,
 {
     #[cfg(not(any(
         target_os = "ios",
@@ -1089,29 +1085,25 @@ impl FileIoExt for cap_std::fs_utf8::File {
 #[cfg(windows)]
 #[inline]
 fn reopen<AUF: AsUnsafeFile>(as_auf: &AUF) -> io::Result<fs::File> {
-    let unsafe_file = as_auf.as_unsafe_file();
-    unsafe { _reopen(unsafe_file) }
+    let file = as_auf.as_file_view();
+    unsafe { _reopen(&file) }
 }
 
 #[cfg(windows)]
-unsafe fn _reopen(unsafe_file: UnsafeFile) -> io::Result<fs::File> {
-    unsafe_file
-        .as_file_view()
-        .reopen(cap_fs_ext::OpenOptions::new().read(true))
+unsafe fn _reopen(file: &fs::File) -> io::Result<fs::File> {
+    file.reopen(cap_fs_ext::OpenOptions::new().read(true))
 }
 
 #[cfg(windows)]
 #[inline]
 fn reopen_write<AUF: AsUnsafeFile>(as_auf: &AUF) -> io::Result<fs::File> {
-    let unsafe_file = as_auf.as_unsafe_file();
-    unsafe { _reopen_write(unsafe_file) }
+    let file = as_auf.as_file_view();
+    unsafe { _reopen_write(&file) }
 }
 
 #[cfg(windows)]
-unsafe fn _reopen_write(unsafe_file: UnsafeFile) -> io::Result<fs::File> {
-    unsafe_file
-        .as_file_view()
-        .reopen(cap_fs_ext::OpenOptions::new().write(true))
+unsafe fn _reopen_write(file: &fs::File) -> io::Result<fs::File> {
+    file.reopen(cap_fs_ext::OpenOptions::new().write(true))
 }
 
 fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
@@ -1124,8 +1116,7 @@ fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::R
     // unnecesary, but current alternatives involve tricky `unsafe` code.
     buf.resize(
         (buf.len() as u64)
-            .checked_add(len)
-            .unwrap_or(u64::MAX)
+            .saturating_add(len)
             .try_into()
             .unwrap_or(usize::MAX),
         0_u8,
