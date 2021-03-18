@@ -8,7 +8,6 @@ keywords = ["api", "network", "file"]
 categories = ["filesystem", "network-programming", "os"]
 repository = "https://github.com/bytecodealliance/system-interface"
 edition = "2018"
-readme = "README.md"
 
 [build-dependencies]
 rustc_version = "0.3.0"
