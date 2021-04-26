@@ -99,6 +99,16 @@ impl ReadReady for net::TcpStream {
     }
 }
 
+/// Implement `ReadReady` for `std::net::TcpStream`.
+#[cfg(feature = "socket2")]
+impl ReadReady for socket2::Socket {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        use unsafe_io::AsUnsafeSocket;
+        self.as_tcp_stream_view().num_ready_bytes()
+    }
+}
+
 #[cfg(all(not(windows), feature = "os_pipe"))]
 impl ReadReady for os_pipe::PipeReader {
     #[inline]
