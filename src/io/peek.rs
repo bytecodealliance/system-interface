@@ -164,3 +164,12 @@ pub fn peek_from_bufread<BR: BufRead>(buf_read: &mut BR, buf: &mut [u8]) -> io::
     // Call `fill_buf` to read the bytes, but don't call `consume`.
     Read::read(&mut buf_read.fill_buf()?, buf)
 }
+
+#[cfg(feature = "socket2")]
+impl Peek for socket2::Socket {
+    #[inline]
+    fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        use unsafe_io::AsUnsafeSocket;
+        self.as_tcp_stream_view().peek(buf)
+    }
+}

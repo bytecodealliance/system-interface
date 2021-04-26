@@ -118,3 +118,12 @@ impl<'a> IsTerminal for cap_std::net::TcpStream {
         false
     }
 }
+
+#[cfg(all(windows, feature = "socket2"))]
+impl IsTerminal for socket2::Socket {
+    #[inline]
+    fn is_terminal(&self) -> bool {
+        use unsafe_io::AsUnsafeSocket;
+        self.as_tcp_stream_view().is_terminal()
+    }
+}

@@ -158,3 +158,12 @@ fn raw_socket_is_read_write(raw_socket: RawSocket) -> io::Result<(bool, bool)> {
 
     Ok((read, write))
 }
+
+#[cfg(all(windows, feature = "socket2"))]
+impl IsReadWrite for socket2::Socket {
+    #[inline]
+    fn is_read_write(&self) -> io::Result<(bool, bool)> {
+        use unsafe_io::AsUnsafeSocket;
+        self.as_tcp_stream_view().is_read_write()
+    }
+}
