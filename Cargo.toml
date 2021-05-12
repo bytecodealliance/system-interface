@@ -34,7 +34,7 @@ winapi = { version = "0.3.9", features = [
     "winerror",
     "winsock2",
 ] }
-winx = "0.23.0"
+winx = "0.25.0"
 
 [dev-dependencies]
 cap-fs-ext = "0.13.7"
