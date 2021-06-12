@@ -1,11 +1,13 @@
 #[macro_use]
 mod sys_common;
 
+#[cfg(not(target_os = "openbsd"))]
 use std::fs::OpenOptions;
+#[cfg(not(target_os = "openbsd"))]
 use system_interface::fs::FileIoExt;
 
 #[test]
-#[cfg(not(windows))]
+#[cfg(not(any(windows, target_os = "openbsd")))]
 fn allocate() {
     let dir = tempfile::tempdir().unwrap();
     let file = check!(OpenOptions::new()

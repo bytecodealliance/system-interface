@@ -3,10 +3,16 @@
     target_os = "ios",
     target_os = "macos",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox",
 )))]
 use posish::fs::fadvise;
-#[cfg(not(any(windows, target_os = "netbsd", target_os = "redox")))]
+#[cfg(not(any(
+    windows,
+    target_os = "netbsd",
+    target_os = "redox",
+    target_os = "openbsd"
+)))]
 use posish::fs::posix_fallocate;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 use posish::fs::rdadvise;
@@ -30,6 +36,7 @@ use {posish::fs::tell, posish::fs::FileExt};
     target_os = "ios",
     target_os = "macos",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox"
 )))]
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -55,6 +62,7 @@ pub enum Advice {
     target_os = "ios",
     target_os = "macos",
     target_os = "netbsd",
+    target_os = "openbsd",
     target_os = "redox"
 ))]
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -402,6 +410,7 @@ where
         target_os = "ios",
         target_os = "macos",
         target_os = "netbsd",
+        target_os = "openbsd",
         target_os = "redox"
     )))]
     #[inline]
@@ -434,7 +443,7 @@ where
         rdadvise(self, offset, len)
     }
 
-    #[cfg(any(target_os = "netbsd", target_os = "redox"))]
+    #[cfg(any(target_os = "netbsd", target_os = "redox", target_os = "openbsd"))]
     #[inline]
     fn advise(&self, _offset: u64, _len: u64, _advice: Advice) -> io::Result<()> {
         // Netbsd lacks `posix_fadvise` and doesn't have an obvious replacement,
@@ -442,7 +451,7 @@ where
         Ok(())
     }
 
-    #[cfg(not(any(target_os = "netbsd", target_os = "redox")))]
+    #[cfg(not(any(target_os = "netbsd", target_os = "redox", target_os = "openbsd")))]
     #[inline]
     fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
         posix_fallocate(self, offset, len)
@@ -451,6 +460,11 @@ where
     #[cfg(target_os = "netbsd")]
     fn allocate(&self, _offset: u64, _len: u64) -> io::Result<()> {
         todo!("NetBSD 7.0 supports posix_fallocate; add bindings for it")
+    }
+
+    #[cfg(target_os = "openbsd")]
+    fn allocate(&self, _offset: u64, _len: u64) -> io::Result<()> {
+        todo!("OpenBSD does not support posix_fallocate; figure out what to do")
     }
 
     #[cfg(target_os = "redox")]
