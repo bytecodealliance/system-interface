@@ -1,6 +1,6 @@
 [package]
 name = "system-interface"
-version = "0.6.6-alpha.0"
+version = "0.6.6"
 description = "Extensions to the Rust standard library"
 authors = ["Dan Gohman <dev@sunfishcode.online>"]
 license = "Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT"
