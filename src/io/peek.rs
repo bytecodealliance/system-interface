@@ -1,3 +1,5 @@
+#[cfg(any(feature = "cap_std_impls", feature = "cap_std_impls_utf8"))]
+use io_lifetimes::AsFilelike;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
 use std::{
@@ -5,8 +7,6 @@ use std::{
     io::{self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, StdinLock, Take},
     net::TcpStream,
 };
-#[cfg(any(feature = "cap_std_impls", feature = "cap_std_impls_utf8"))]
-use unsafe_io::AsUnsafeFile;
 
 /// A trait providing the `peek` function for reading without consuming.
 ///
@@ -38,7 +38,7 @@ impl Peek for File {
 impl Peek for cap_std::fs::File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.as_file_view().peek(buf)
+        self.as_filelike_view::<std::fs::File>().peek(buf)
     }
 }
 
@@ -46,7 +46,7 @@ impl Peek for cap_std::fs::File {
 impl Peek for cap_std::fs_utf8::File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.as_file_view().peek(buf)
+        self.as_filelike_view::<std::fs::File>().peek(buf)
     }
 }
 
@@ -169,7 +169,7 @@ pub fn peek_from_bufread<BR: BufRead>(buf_read: &mut BR, buf: &mut [u8]) -> io::
 impl Peek for socket2::Socket {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        use unsafe_io::AsUnsafeSocket;
-        self.as_tcp_stream_view().peek(buf)
+        use io_lifetimes::AsSocketlike;
+        self.as_socketlike_view::<std::net::TcpStream>().peek(buf)
     }
 }

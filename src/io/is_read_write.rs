@@ -1,20 +1,6 @@
-#[cfg(not(windows))]
-use posish::io::is_read_write;
 use std::io;
-#[cfg(all(
-    windows,
-    any(
-        feature = "cap_std_impls",
-        feature = "fs_utf8",
-        feature = "async_std",
-        feature = "cap_async_std_impls"
-    )
-))]
-use unsafe_io::AsUnsafeFile;
 #[cfg(not(windows))]
-use unsafe_io::AsUnsafeHandle;
-#[cfg(feature = "async_std")]
-use unsafe_io::{FromUnsafeFile, IntoUnsafeFile};
+use {io_lifetimes::AsFilelike, posish::io::is_read_write};
 #[cfg(windows)]
 use {
     std::{
@@ -33,10 +19,10 @@ pub trait IsReadWrite {
 }
 
 #[cfg(not(windows))]
-impl<T: AsUnsafeHandle> IsReadWrite for T {
+impl<T: AsFilelike> IsReadWrite for T {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        is_read_write(self)
+        Ok(is_read_write(self)?)
     }
 }
 
@@ -52,7 +38,8 @@ impl IsReadWrite for std::fs::File {
 impl IsReadWrite for cap_std::fs::File {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        file_is_read_write(&self.as_file_view())
+        use io_lifetimes::AsFilelike;
+        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
     }
 }
 
@@ -60,7 +47,8 @@ impl IsReadWrite for cap_std::fs::File {
 impl IsReadWrite for std::fs_utf8::File {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        file_is_read_write(&self.as_file_view())
+        use io_lifetimes::AsFilelike;
+        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
     }
 }
 
@@ -68,7 +56,8 @@ impl IsReadWrite for std::fs_utf8::File {
 impl IsReadWrite for async_std::fs::File {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        file_is_read_write(&self.as_file_view())
+        use io_lifetimes::AsFilelike;
+        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
     }
 }
 
@@ -76,7 +65,8 @@ impl IsReadWrite for async_std::fs::File {
 impl IsReadWrite for cap_async_std::fs::File {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        file_is_read_write(&self.as_file_view())
+        use io_lifetimes::AsFilelike;
+        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
     }
 }
 
@@ -84,7 +74,8 @@ impl IsReadWrite for cap_async_std::fs::File {
 impl IsReadWrite for cap_async_std::fs_utf8::File {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        file_is_read_write(&self.as_file_view())
+        use io_lifetimes::AsFilelike;
+        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
     }
 }
 
@@ -163,7 +154,8 @@ fn raw_socket_is_read_write(raw_socket: RawSocket) -> io::Result<(bool, bool)> {
 impl IsReadWrite for socket2::Socket {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        use unsafe_io::AsUnsafeSocket;
-        self.as_tcp_stream_view().is_read_write()
+        use io_lifetimes::AsSocketlike;
+        self.as_socketlike_view::<std::net::TcpStream>()
+            .is_read_write()
     }
 }

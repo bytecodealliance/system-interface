@@ -1,5 +1,5 @@
 #[cfg(not(any(windows, target_os = "redox")))]
-use posish::io::fionread;
+use posish::io::ioctl_fionread;
 #[cfg(not(target_os = "redox"))]
 use std::net;
 use std::{
@@ -24,7 +24,7 @@ pub trait ReadReady {
 impl ReadReady for Stdin {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        fionread(self)
+        Ok(ioctl_fionread(self)?)
     }
 }
 
@@ -43,7 +43,7 @@ impl ReadReady for Stdin {
 impl<'a> ReadReady for StdinLock<'a> {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        fionread(self)
+        Ok(ioctl_fionread(self)?)
     }
 }
 
@@ -62,7 +62,7 @@ impl<'a> ReadReady for StdinLock<'a> {
 impl ReadReady for net::TcpStream {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        fionread(self)
+        Ok(ioctl_fionread(self)?)
     }
 }
 
@@ -81,7 +81,7 @@ impl ReadReady for net::TcpStream {
 impl ReadReady for std::os::unix::net::UnixStream {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        fionread(self)
+        Ok(ioctl_fionread(self)?)
     }
 }
 
@@ -104,8 +104,9 @@ impl ReadReady for net::TcpStream {
 impl ReadReady for socket2::Socket {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        use unsafe_io::AsUnsafeSocket;
-        self.as_tcp_stream_view().num_ready_bytes()
+        use io_lifetimes::AsSocketlike;
+        self.as_socketlike_view::<std::net::TcpStream>()
+            .num_ready_bytes()
     }
 }
 
@@ -113,7 +114,7 @@ impl ReadReady for socket2::Socket {
 impl ReadReady for os_pipe::PipeReader {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        fionread(self)
+        Ok(ioctl_fionread(self)?)
     }
 }
 
@@ -130,7 +131,7 @@ impl ReadReady for os_pipe::PipeReader {
 impl ReadReady for ChildStdout {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        fionread(self)
+        Ok(ioctl_fionread(self)?)
     }
 }
 
@@ -147,7 +148,7 @@ impl ReadReady for ChildStdout {
 impl ReadReady for ChildStderr {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        fionread(self)
+        Ok(ioctl_fionread(self)?)
     }
 }
 
@@ -189,8 +190,8 @@ impl ReadReady for char_device::CharDevice {
 impl ReadReady for cap_std::fs::File {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        use unsafe_io::AsUnsafeFile;
-        self.as_file_view().num_ready_bytes()
+        use io_lifetimes::AsFilelike;
+        self.as_filelike_view::<std::fs::File>().num_ready_bytes()
     }
 }
 
@@ -199,7 +200,7 @@ impl ReadReady for cap_std::fs::File {
 impl ReadReady for cap_std::fs_utf8::File {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        use unsafe_io::AsUnsafeFile;
-        self.as_file_view().num_ready_bytes()
+        use io_lifetimes::AsFilelike;
+        self.as_filelike_view::<std::fs::File>().num_ready_bytes()
     }
 }
