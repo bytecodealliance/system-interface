@@ -86,6 +86,7 @@ impl<T> GetSetFdFlags for T {
         let flags = fcntl_getfl(self)?;
 
         fd_flags.set(FdFlags::APPEND, flags.contains(OFlags::APPEND));
+        #[cfg(not(target_os = "freebsd"))]
         fd_flags.set(FdFlags::DSYNC, flags.contains(OFlags::DSYNC));
         fd_flags.set(FdFlags::NONBLOCK, flags.contains(OFlags::NONBLOCK));
         #[cfg(any(
