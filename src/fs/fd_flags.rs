@@ -1,27 +1,56 @@
 use bitflags::bitflags;
+use io_lifetimes::{AsFilelike, FromFilelike};
 #[cfg(not(any(windows, target_os = "redox")))]
-use posish::fs::{getfl, setfl, OFlags};
-use std::io;
-use unsafe_io::AsUnsafeFile;
+use posish::fs::{fcntl_getfl, fcntl_setfl, OFlags};
+#[cfg(not(windows))]
+use std::marker::PhantomData;
+use std::{fs, io};
 #[cfg(windows)]
 use {
     cap_fs_ext::{OpenOptions, Reopen},
+    io_lifetimes::AsHandle,
     std::os::windows::fs::OpenOptionsExt,
-    std::os::windows::io::AsRawHandle,
-    unsafe_io::FromUnsafeFile,
     winapi::um::winbase::FILE_FLAG_WRITE_THROUGH,
     winx::file::{AccessMode, FileModeInformation},
 };
 
+/// An opaque representation of the state needed to perform a `set_fd_flags`
+/// operation.
+#[cfg(windows)]
+pub struct SetFdFlags<T> {
+    reopened: T,
+}
+
+/// An opaque representation of the state needed to perform a `set_fd_flags`
+/// operation.
+#[cfg(not(windows))]
+pub struct SetFdFlags<T> {
+    flags: OFlags,
+    _phantom: PhantomData<T>,
+}
+
 /// Extension trait that can indicate various I/O flags.
 pub trait GetSetFdFlags {
     /// Query the "status" flags for the `self` file descriptor.
-    fn get_fd_flags(&self) -> io::Result<FdFlags>;
+    fn get_fd_flags(&self) -> io::Result<FdFlags>
+    where
+        Self: AsFilelike;
 
-    /// Set the "status" flags for the `self` file descriptor. On some
-    /// platforms, this may close the file descriptor and produce a new
-    /// one.
-    fn set_fd_flags(&mut self, flags: FdFlags) -> io::Result<()>;
+    /// Create a new `SetFdFlags` value for use with `set_fd_flags`.
+    ///
+    /// Some platforms lack the ability to dynamically set the flags and
+    /// implement `set_fd_flags` by closing and re-opening the resource and
+    /// splitting it into two steps like this simplifies the lifetimes.
+    fn new_set_fd_flags(&self, flags: FdFlags) -> io::Result<SetFdFlags<Self>>
+    where
+        Self: AsFilelike + FromFilelike + Sized;
+
+    /// Set the "status" flags for the `self` file descriptor.
+    ///
+    /// This requires a `SetFdFlags` obtained from `new_set_fd_flags`.
+    fn set_fd_flags(&mut self, set_fd_flags: SetFdFlags<Self>) -> io::Result<()>
+    where
+        Self: AsFilelike + Sized;
 }
 
 bitflags! {
@@ -48,10 +77,13 @@ bitflags! {
 }
 
 #[cfg(not(windows))]
-impl<T: AsUnsafeFile> GetSetFdFlags for T {
-    fn get_fd_flags(&self) -> io::Result<FdFlags> {
+impl<T> GetSetFdFlags for T {
+    fn get_fd_flags(&self) -> io::Result<FdFlags>
+    where
+        Self: AsFilelike,
+    {
         let mut fd_flags = FdFlags::empty();
-        let flags = getfl(self)?;
+        let flags = fcntl_getfl(self)?;
 
         fd_flags.set(FdFlags::APPEND, flags.contains(OFlags::APPEND));
         fd_flags.set(FdFlags::DSYNC, flags.contains(OFlags::DSYNC));
@@ -79,7 +111,10 @@ impl<T: AsUnsafeFile> GetSetFdFlags for T {
         Ok(fd_flags)
     }
 
-    fn set_fd_flags(&mut self, fd_flags: FdFlags) -> io::Result<()> {
+    fn new_set_fd_flags(&self, fd_flags: FdFlags) -> io::Result<SetFdFlags<Self>>
+    where
+        Self: AsFilelike,
+    {
         let mut flags = OFlags::empty();
         flags.set(OFlags::APPEND, fd_flags.contains(FdFlags::APPEND));
         flags.set(OFlags::NONBLOCK, fd_flags.contains(FdFlags::NONBLOCK));
@@ -92,15 +127,31 @@ impl<T: AsUnsafeFile> GetSetFdFlags for T {
             ));
         }
 
-        setfl(self, flags)
+        Ok(SetFdFlags {
+            flags,
+            _phantom: PhantomData,
+        })
+    }
+
+    fn set_fd_flags(&mut self, set_fd_flags: SetFdFlags<Self>) -> io::Result<()>
+    where
+        Self: AsFilelike + Sized,
+    {
+        Ok(fcntl_setfl(
+            &*self.as_filelike_view::<fs::File>(),
+            set_fd_flags.flags,
+        )?)
     }
 }
 
 #[cfg(windows)]
-impl<T: AsUnsafeFile + FromUnsafeFile> GetSetFdFlags for T {
-    fn get_fd_flags(&self) -> io::Result<FdFlags> {
+impl<T> GetSetFdFlags for T {
+    fn get_fd_flags(&self) -> io::Result<FdFlags>
+    where
+        Self: AsFilelike,
+    {
         let mut fd_flags = FdFlags::empty();
-        let handle = self.as_unsafe_file().as_raw_handle();
+        let handle = self.as_filelike();
         let access_mode = winx::file::query_access_information(handle)?;
         let mode = winx::file::query_mode_information(handle)?;
 
@@ -120,7 +171,10 @@ impl<T: AsUnsafeFile + FromUnsafeFile> GetSetFdFlags for T {
         Ok(fd_flags)
     }
 
-    fn set_fd_flags(&mut self, fd_flags: FdFlags) -> io::Result<()> {
+    fn new_set_fd_flags(&self, fd_flags: FdFlags) -> io::Result<SetFdFlags<Self>>
+    where
+        Self: AsFilelike + FromFilelike,
+    {
         let mut flags = 0;
 
         if fd_flags.contains(FdFlags::SYNC)
@@ -137,8 +191,8 @@ impl<T: AsUnsafeFile + FromUnsafeFile> GetSetFdFlags for T {
             ));
         }
 
-        let handle = self.as_unsafe_file().as_raw_handle();
-        let access_mode = winx::file::query_access_information(handle)?;
+        let file = self.as_filelike_view::<fs::File>();
+        let access_mode = winx::file::query_access_information(file.as_handle())?;
         let new_access_mode = file_access_mode_from_fd_flags(
             fd_flags,
             access_mode.contains(AccessMode::FILE_READ_DATA),
@@ -148,8 +202,15 @@ impl<T: AsUnsafeFile + FromUnsafeFile> GetSetFdFlags for T {
         let mut options = OpenOptions::new();
         options.access_mode(new_access_mode.bits());
         options.custom_flags(flags);
-        let reopened = self.as_file_view().reopen(&options)?;
-        *self = T::from_filelike(reopened);
+        let reopened = Self::from_into_filelike(file.reopen(&options)?);
+        Ok(SetFdFlags { reopened })
+    }
+
+    fn set_fd_flags(&mut self, set_fd_flags: SetFdFlags<Self>) -> io::Result<()>
+    where
+        Self: AsFilelike,
+    {
+        *self = set_fd_flags.reopened;
         Ok(())
     }
 }

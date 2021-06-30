@@ -14,7 +14,8 @@ fn test_get_set_fd_flags() {
     assert!(!flags.contains(FdFlags::APPEND));
     assert!(!flags.contains(FdFlags::NONBLOCK));
 
-    check!(file.set_fd_flags(FdFlags::APPEND));
+    let set_fd_flags = check!(file.new_set_fd_flags(FdFlags::APPEND));
+    check!(file.set_fd_flags(set_fd_flags));
 
     let flags = check!(file.get_fd_flags());
     assert!(!flags.contains(FdFlags::SYNC));
@@ -26,7 +27,8 @@ fn test_get_set_fd_flags() {
     assert!(file.set_fd_flags(FdFlags::NONBLOCK).is_err());
     #[cfg(not(windows))]
     {
-        check!(file.set_fd_flags(FdFlags::NONBLOCK));
+        let set_fd_flags = check!(file.new_set_fd_flags(FdFlags::NONBLOCK));
+        check!(file.set_fd_flags(set_fd_flags));
 
         let flags = check!(file.get_fd_flags());
         assert!(!flags.contains(FdFlags::SYNC));

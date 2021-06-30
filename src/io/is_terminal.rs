@@ -1,5 +1,3 @@
-#[cfg(not(windows))]
-use posish::io::isatty;
 #[cfg(windows)]
 use std::{
     fs,
@@ -7,7 +5,7 @@ use std::{
     net,
 };
 #[cfg(not(windows))]
-use unsafe_io::AsUnsafeHandle;
+use {io_lifetimes::AsFilelike, posish::io::isatty};
 
 /// Extension for I/O handles which may or may not be terminals.
 pub trait IsTerminal {
@@ -19,10 +17,7 @@ pub trait IsTerminal {
 
 /// Implement `IsTerminal` for types that implement `AsRawFd`.
 #[cfg(not(windows))]
-impl<T> IsTerminal for T
-where
-    T: AsUnsafeHandle,
-{
+impl<T: AsFilelike> IsTerminal for T {
     #[inline]
     fn is_terminal(&self) -> bool {
         isatty(self)
@@ -85,7 +80,7 @@ impl<'a> IsTerminal for StderrLock<'a> {
 
 /// Implement `IsTerminal` for `std::fs::File`.
 #[cfg(windows)]
-impl<'a> IsTerminal for fs::File {
+impl IsTerminal for fs::File {
     #[inline]
     fn is_terminal(&self) -> bool {
         false
@@ -94,7 +89,7 @@ impl<'a> IsTerminal for fs::File {
 
 /// Implement `IsTerminal` for `std::net::TcpStream`.
 #[cfg(windows)]
-impl<'a> IsTerminal for net::TcpStream {
+impl IsTerminal for net::TcpStream {
     #[inline]
     fn is_terminal(&self) -> bool {
         false
@@ -103,7 +98,7 @@ impl<'a> IsTerminal for net::TcpStream {
 
 /// Implement `IsTerminal` for `cap_std::fs::File`.
 #[cfg(all(windows, feature = "cap_std_impls"))]
-impl<'a> IsTerminal for cap_std::fs::File {
+impl IsTerminal for cap_std::fs::File {
     #[inline]
     fn is_terminal(&self) -> bool {
         false
@@ -112,7 +107,7 @@ impl<'a> IsTerminal for cap_std::fs::File {
 
 /// Implement `IsTerminal` for `cap_std::net::TcpStream`.
 #[cfg(all(windows, feature = "cap_std_impls"))]
-impl<'a> IsTerminal for cap_std::net::TcpStream {
+impl IsTerminal for cap_std::net::TcpStream {
     #[inline]
     fn is_terminal(&self) -> bool {
         false
@@ -123,7 +118,8 @@ impl<'a> IsTerminal for cap_std::net::TcpStream {
 impl IsTerminal for socket2::Socket {
     #[inline]
     fn is_terminal(&self) -> bool {
-        use unsafe_io::AsUnsafeSocket;
-        self.as_tcp_stream_view().is_terminal()
+        use io_lifetimes::AsSocketlike;
+        self.as_socketlike_view::<std::net::TcpStream>()
+            .is_terminal()
     }
 }
