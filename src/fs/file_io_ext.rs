@@ -9,7 +9,7 @@ use io_lifetimes::AsFilelike;
 )))]
 use posish::fs::fadvise;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
-use posish::fs::rdadvise;
+use posish::fs::fcntl_rdadvise;
 #[cfg(not(any(
     windows,
     target_os = "netbsd",
@@ -426,8 +426,9 @@ impl<T: AsFilelike> FileIoExt for T {
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     #[inline]
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
-        // Darwin lacks `posix_fadvise`, but does have an `rdadvise` feature
-        // which roughly corresponds to `WillNeed`. This is not yet tuned.
+        // Darwin lacks `posix_fadvise`, but does have an `fcntl_rdadvise`
+        // feature which roughly corresponds to `WillNeed`. This is not yet
+        // tuned.
         match advice {
             Advice::WillNeed => (),
             Advice::Normal
@@ -437,7 +438,7 @@ impl<T: AsFilelike> FileIoExt for T {
             | Advice::DontNeed => return Ok(()),
         }
 
-        rdadvise(self, offset, len)
+        Ok(fcntl_rdadvise(self, offset, len)?)
     }
 
     #[cfg(any(target_os = "netbsd", target_os = "redox", target_os = "openbsd"))]
