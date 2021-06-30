@@ -24,7 +24,9 @@ fn test_get_set_fd_flags() {
 
     // `NONBLOCK` is not supported on Windows yet.
     #[cfg(windows)]
-    assert!(file.set_fd_flags(FdFlags::NONBLOCK).is_err());
+    {
+        assert!(file.new_set_fd_flags(FdFlags::NONBLOCK).is_err());
+    }
     #[cfg(not(windows))]
     {
         let set_fd_flags = check!(file.new_set_fd_flags(FdFlags::NONBLOCK));
