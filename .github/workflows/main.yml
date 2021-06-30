@@ -129,7 +129,8 @@ jobs:
     - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=i686-pc-windows-msvc
     - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=i686-pc-windows-gnu
     - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=x86_64-fuchsia
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=wasm32-unknown-emscripten
+    # socket2 doesn't yet support wasm32-unknown-emscripten
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=wasm32-unknown-emscripten
 
   test:
     name: Test
