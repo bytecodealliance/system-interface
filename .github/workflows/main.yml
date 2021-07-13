@@ -40,6 +40,13 @@ jobs:
     - uses: ./.github/actions/install-rust
       with:
         toolchain: ${{ matrix.rust }}
+
+    - name: Install musl-tools
+      run: |
+        set -ex
+        sudo apt-get update
+        sudo apt-get install -y musl-tools
+
     - run: >
         rustup target add
         x86_64-unknown-linux-musl
@@ -99,6 +106,13 @@ jobs:
       with:
         toolchain: ${{ matrix.rust }}
     - run: sudo apt-get install libssl-dev pkg-config
+
+    - name: Install musl-tools
+      run: |
+        set -ex
+        sudo apt-get update
+        sudo apt-get install -y musl-tools
+
     - run: >
         rustup target add
         x86_64-unknown-linux-musl
@@ -258,5 +272,12 @@ jobs:
     - uses: ./.github/actions/install-rust
       with:
         toolchain: ${{ matrix.rust }}
+
+    - name: Install musl-tools
+      run: |
+        set -ex
+        sudo apt-get update
+        sudo apt-get install -y musl-tools
+
     - run: rustup target add x86_64-unknown-linux-musl
     - run: cargo test --target x86_64-unknown-linux-musl --features cap_std_impls --workspace
