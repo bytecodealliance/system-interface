@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use io_lifetimes::{AsFilelike, FromFilelike};
 #[cfg(not(any(windows, target_os = "redox")))]
-use posish::fs::{fcntl_getfl, fcntl_setfl, OFlags};
+use rsix::fs::{fcntl_getfl, fcntl_setfl, OFlags};
 #[cfg(not(windows))]
 use std::marker::PhantomData;
 use std::{fs, io};

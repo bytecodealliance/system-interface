@@ -1,5 +1,5 @@
 #[cfg(not(any(windows, target_os = "redox")))]
-use posish::io::ioctl_fionread;
+use rsix::io::ioctl_fionread;
 #[cfg(not(target_os = "redox"))]
 use std::net;
 use std::{

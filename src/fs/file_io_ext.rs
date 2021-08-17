@@ -7,18 +7,18 @@ use io_lifetimes::AsFilelike;
     target_os = "openbsd",
     target_os = "redox",
 )))]
-use posish::fs::fadvise;
+use rsix::fs::fadvise;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
-use posish::fs::fcntl_rdadvise;
+use rsix::fs::fcntl_rdadvise;
 #[cfg(not(any(
     windows,
     target_os = "netbsd",
     target_os = "redox",
     target_os = "openbsd"
 )))]
-use posish::fs::{fallocate, FallocateFlags};
+use rsix::fs::{fallocate, FallocateFlags};
 #[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
-use posish::io::{preadv, pwritev};
+use rsix::io::{preadv, pwritev};
 use std::{
     convert::TryInto,
     fmt::Arguments,
@@ -28,7 +28,7 @@ use std::{
 #[cfg(windows)]
 use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt};
 #[cfg(not(windows))]
-use {posish::fs::tell, posish::fs::FileExt};
+use {rsix::fs::tell, rsix::fs::FileExt};
 
 /// Advice to pass to `FileIoExt::advise`.
 #[cfg(not(any(
@@ -43,17 +43,17 @@ use {posish::fs::tell, posish::fs::FileExt};
 #[repr(i32)]
 pub enum Advice {
     /// No advice; default heuristics apply.
-    Normal = posish::fs::Advice::Normal as i32,
+    Normal = rsix::fs::Advice::Normal as i32,
     /// Data will be accessed sequentially at ascending offsets.
-    Sequential = posish::fs::Advice::Sequential as i32,
+    Sequential = rsix::fs::Advice::Sequential as i32,
     /// Data will be accessed with an irregular access pattern.
-    Random = posish::fs::Advice::Random as i32,
+    Random = rsix::fs::Advice::Random as i32,
     /// Data will be accessed soon.
-    WillNeed = posish::fs::Advice::WillNeed as i32,
+    WillNeed = rsix::fs::Advice::WillNeed as i32,
     /// Data will not be accessed soon.
-    DontNeed = posish::fs::Advice::DontNeed as i32,
+    DontNeed = rsix::fs::Advice::DontNeed as i32,
     /// Data will be accessed exactly once.
-    NoReuse = posish::fs::Advice::NoReuse as i32,
+    NoReuse = rsix::fs::Advice::NoReuse as i32,
 }
 
 /// Advice to pass to `FileIoExt::advise`.
@@ -413,12 +413,12 @@ impl<T: AsFilelike> FileIoExt for T {
     #[inline]
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
         let advice = match advice {
-            Advice::WillNeed => posish::fs::Advice::WillNeed,
-            Advice::Normal => posish::fs::Advice::Normal,
-            Advice::Sequential => posish::fs::Advice::Sequential,
-            Advice::NoReuse => posish::fs::Advice::NoReuse,
-            Advice::Random => posish::fs::Advice::Random,
-            Advice::DontNeed => posish::fs::Advice::DontNeed,
+            Advice::WillNeed => rsix::fs::Advice::WillNeed,
+            Advice::Normal => rsix::fs::Advice::Normal,
+            Advice::Sequential => rsix::fs::Advice::Sequential,
+            Advice::NoReuse => rsix::fs::Advice::NoReuse,
+            Advice::Random => rsix::fs::Advice::Random,
+            Advice::DontNeed => rsix::fs::Advice::DontNeed,
         };
         Ok(fadvise(self, offset, len, advice)?)
     }
