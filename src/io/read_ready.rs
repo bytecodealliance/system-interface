@@ -1,11 +1,9 @@
 #[cfg(not(any(windows, target_os = "redox")))]
 use rsix::io::ioctl_fionread;
+use std::io::{self, Stdin, StdinLock};
 #[cfg(not(target_os = "redox"))]
 use std::net;
-use std::{
-    io::{self, Stdin, StdinLock},
-    process::{ChildStderr, ChildStdout},
-};
+use std::process::{ChildStderr, ChildStdout};
 #[cfg(windows)]
 use {
     std::{mem::MaybeUninit, os::windows::io::AsRawSocket},

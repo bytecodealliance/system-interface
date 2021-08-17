@@ -1,12 +1,10 @@
 #[cfg(any(feature = "cap_std_impls", feature = "cap_std_impls_utf8"))]
 use io_lifetimes::AsFilelike;
+use std::fs::File;
+use std::io::{self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, StdinLock, Take};
+use std::net::TcpStream;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
-use std::{
-    fs::File,
-    io::{self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, StdinLock, Take},
-    net::TcpStream,
-};
 
 /// A trait providing the `peek` function for reading without consuming.
 ///

@@ -1,10 +1,8 @@
 #[macro_use]
 mod sys_common;
 
-use std::{
-    fs::OpenOptions,
-    io::{IoSlice, IoSliceMut},
-};
+use std::fs::OpenOptions;
+use std::io::{IoSlice, IoSliceMut};
 #[cfg(any(not(windows), feature = "cap_std_impls"))]
 use sys_common::io::tmpdir;
 use system_interface::fs::FileIoExt;

@@ -1,11 +1,9 @@
 #[macro_use]
 mod sys_common;
 
-use std::{
-    net::{Shutdown, TcpListener, TcpStream},
-    sync::{Arc, Condvar, Mutex},
-    thread,
-};
+use std::net::{Shutdown, TcpListener, TcpStream};
+use std::sync::{Arc, Condvar, Mutex};
+use std::thread;
 use system_interface::io::IsReadWrite;
 #[cfg(feature = "cap_std_impls")]
 use {cap_fs_ext::OpenOptions, sys_common::io::tmpdir};

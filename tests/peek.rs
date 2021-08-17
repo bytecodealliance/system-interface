@@ -1,7 +1,5 @@
-use std::{
-    io::{Cursor, Read},
-    str,
-};
+use std::io::{Cursor, Read};
+use std::str;
 use system_interface::io::Peek;
 
 #[test]

@@ -19,12 +19,10 @@ use rsix::fs::fcntl_rdadvise;
 use rsix::fs::{fallocate, FallocateFlags};
 #[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
 use rsix::io::{preadv, pwritev};
-use std::{
-    convert::TryInto,
-    fmt::Arguments,
-    io::{self, IoSlice, IoSliceMut, Read, Seek, SeekFrom, Write},
-    slice,
-};
+use std::convert::TryInto;
+use std::fmt::Arguments;
+use std::io::{self, IoSlice, IoSliceMut, Read, Seek, SeekFrom, Write};
+use std::slice;
 #[cfg(windows)]
 use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt};
 #[cfg(not(windows))]
@@ -119,9 +117,10 @@ pub trait FileIoExt {
     /// Reads the exact number of byte required to fill buf from the given
     /// offset.
     ///
-    /// This is similar to [`std::os::unix::fs::FileExt::read_exact_at`], except
-    /// it takes `self` by immutable reference since the entire side effect is
-    /// I/O, and it's supported on non-Unix platforms including Windows.
+    /// This is similar to [`std::os::unix::fs::FileExt::read_exact_at`],
+    /// except it takes `self` by immutable reference since the entire side
+    /// effect is I/O, and it's supported on non-Unix platforms including
+    /// Windows.
     ///
     /// [`std::os::unix::fs::FileExt::read_exact_at`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html#tymethod.read_exact_at
     fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()>;
@@ -178,7 +177,8 @@ pub trait FileIoExt {
         Ok(())
     }
 
-    /// Determines if this `Read`er has an efficient `read_vectored_at` implementation.
+    /// Determines if this `Read`er has an efficient `read_vectored_at`
+    /// implementation.
     #[inline]
     fn is_read_vectored_at(&self) -> bool {
         false
@@ -222,8 +222,8 @@ pub trait FileIoExt {
 
     /// Attempts to write an entire buffer into this writer.
     ///
-    /// This is similar to [`std::io::Write::write_all`], except it takes `self`
-    /// by immutable reference since the entire side effect is I/O.
+    /// This is similar to [`std::io::Write::write_all`], except it takes
+    /// `self` by immutable reference since the entire side effect is I/O.
     ///
     /// [`std::io::Write::write_all`]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write_all
     fn write_all(&self, buf: &[u8]) -> io::Result<()>;
@@ -294,21 +294,24 @@ pub trait FileIoExt {
         Ok(())
     }
 
-    /// Determines if this `Write`r has an efficient `write_vectored_at` implementation.
+    /// Determines if this `Write`r has an efficient `write_vectored_at`
+    /// implementation.
     #[inline]
     fn is_write_vectored_at(&self) -> bool {
         false
     }
 
-    /// Writes a formatted string into this writer, returning any error encountered.
+    /// Writes a formatted string into this writer, returning any error
+    /// encountered.
     ///
-    /// This is similar to [`std::io::Write::write_fmt`], except it takes `self` by
-    /// immutable reference since the entire side effect is I/O.
+    /// This is similar to [`std::io::Write::write_fmt`], except it takes
+    /// `self` by immutable reference since the entire side effect is I/O.
     ///
     /// [`std::io::Write::write_fmt`]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write_fmt
     fn write_fmt(&self, fmt: Arguments) -> io::Result<()>;
 
-    /// Flush this output stream, ensuring that all intermediately buffered contents reach their destination.
+    /// Flush this output stream, ensuring that all intermediately buffered
+    /// contents reach their destination.
     ///
     /// This is similar to [`std::io::Write::flush`], except it takes `self` by
     /// immutable reference since the entire side effect is I/O.
@@ -603,8 +606,8 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn allocate(&self, _offset: u64, _len: u64) -> io::Result<()> {
-        // We can't faithfully support allocate on Windows without exposing race conditions.
-        // Instead, refuse:
+        // We can't faithfully support allocate on Windows without exposing race
+        // conditions. Instead, refuse:
         Err(io::Error::new(
             io::ErrorKind::PermissionDenied,
             "file allocate is not supported on Windows",
