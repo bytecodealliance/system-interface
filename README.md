@@ -9,6 +9,7 @@
 
   <p>
     <a href="https://github.com/bytecodealliance/system-interface/actions?query=workflow%3ACI"><img src="https://github.com/bytecodealliance/system-interface/workflows/CI/badge.svg" alt="Github Actions CI Status" /></a>
+    <a href="https://bytecodealliance.zulipchat.com/#narrow/stream/217126-wasmtime"><img src="https://img.shields.io/badge/zulip-join_chat-brightgreen.svg" alt="zulip chat" /></a>
     <a href="https://crates.io/crates/system-interface"><img src="https://img.shields.io/crates/v/system-interface.svg" alt="crates.io page" /></a>
     <a href="https://docs.rs/system-interface"><img src="https://docs.rs/system-interface/badge.svg" alt="docs.rs docs" /></a>
   </p>
