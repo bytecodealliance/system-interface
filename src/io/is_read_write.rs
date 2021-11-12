@@ -1,6 +1,6 @@
 use std::io;
 #[cfg(not(windows))]
-use {io_lifetimes::AsFilelike, rsix::io::is_read_write};
+use {io_lifetimes::AsFilelike, rustix::io::is_read_write};
 #[cfg(windows)]
 use {
     std::{
