@@ -1,5 +1,3 @@
-#[cfg(any(feature = "cap_std_impls", feature = "cap_std_impls_utf8"))]
-use io_lifetimes::AsFilelike;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, StdinLock, Take};
 use std::net::TcpStream;
@@ -36,7 +34,7 @@ impl Peek for File {
 impl Peek for cap_std::fs::File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.as_filelike_view::<std::fs::File>().peek(buf)
+        crate::fs::FileIoExt::peek(self, buf)
     }
 }
 
@@ -44,7 +42,7 @@ impl Peek for cap_std::fs::File {
 impl Peek for cap_std::fs_utf8::File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        self.as_filelike_view::<std::fs::File>().peek(buf)
+        crate::fs::FileIoExt::peek(self, buf)
     }
 }
 

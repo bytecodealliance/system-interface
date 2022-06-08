@@ -5,7 +5,7 @@ use std::{
     net,
 };
 #[cfg(not(windows))]
-use {io_lifetimes::AsFilelike, rustix::io::isatty};
+use {io_lifetimes::AsFilelike, rustix::termios::isatty};
 
 /// Extension for I/O handles which may or may not be terminals.
 pub trait IsTerminal {

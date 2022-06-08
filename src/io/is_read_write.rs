@@ -7,7 +7,7 @@ use {
         os::windows::io::{AsRawSocket, RawSocket},
         ptr,
     },
-    winapi::um::winsock2::{
+    windows_sys::Win32::Networking::WinSock::{
         recv, send, MSG_PEEK, SOCKET, SOCKET_ERROR, WSAEFAULT, WSAESHUTDOWN, WSAEWOULDBLOCK,
     },
 };

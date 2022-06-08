@@ -7,7 +7,7 @@ use std::process::{ChildStderr, ChildStdout};
 #[cfg(windows)]
 use {
     std::{mem::MaybeUninit, os::windows::io::AsRawSocket},
-    winapi::um::winsock2::{ioctlsocket, FIONREAD, SOCKET},
+    windows_sys::Win32::Networking::WinSock::{ioctlsocket, FIONREAD, SOCKET},
 };
 
 /// Extension for readable streams that can indicate the number of bytes
@@ -88,7 +88,7 @@ impl ReadReady for std::os::unix::net::UnixStream {
 impl ReadReady for net::TcpStream {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
-        let mut arg = MaybeUninit::<winapi::ctypes::c_ulong>::uninit();
+        let mut arg = MaybeUninit::<std::os::raw::c_ulong>::uninit();
         if unsafe { ioctlsocket(self.as_raw_socket() as SOCKET, FIONREAD, arg.as_mut_ptr()) } == 0 {
             Ok(unsafe { arg.assume_init() }.into())
         } else {
