@@ -475,12 +475,12 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
     fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read_exact(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -495,7 +495,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut *self.as_filelike_view::<std::fs::File>(), bufs)
+        Read::read_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
     }
 
     #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
@@ -512,7 +512,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read_to_end(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -522,7 +522,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read_to_string(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -538,12 +538,12 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Write::write(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
     fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Write::write_all(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -558,7 +558,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut *self.as_filelike_view::<std::fs::File>(), bufs)
+        Write::write_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
     }
 
     #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
@@ -575,17 +575,17 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut *self.as_filelike_view::<std::fs::File>())
+        Write::flush(&mut &*self.as_filelike_view::<std::fs::File>())
     }
 
     #[inline]
     fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut *self.as_filelike_view::<std::fs::File>(), fmt)
+        Write::write_fmt(&mut &*self.as_filelike_view::<std::fs::File>(), fmt)
     }
 
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
-        Seek::seek(&mut *self.as_filelike_view::<std::fs::File>(), pos)
+        Seek::seek(&mut &*self.as_filelike_view::<std::fs::File>(), pos)
     }
 
     #[inline]
@@ -616,12 +616,12 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
     fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read_exact(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -655,7 +655,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut *self.as_filelike_view::<std::fs::File>(), bufs)
+        Read::read_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
     }
 
     #[inline]
@@ -695,7 +695,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read_to_end(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -705,7 +705,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Read::read_to_string(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -721,12 +721,12 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Write::write(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
     fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut *self.as_filelike_view::<std::fs::File>(), buf)
+        Write::write_all(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -760,7 +760,7 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut *self.as_filelike_view::<std::fs::File>(), bufs)
+        Write::write_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
     }
 
     #[inline]
@@ -800,17 +800,17 @@ impl<T: AsFilelike> FileIoExt for T {
 
     #[inline]
     fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut *self.as_filelike_view::<std::fs::File>())
+        Write::flush(&mut &*self.as_filelike_view::<std::fs::File>())
     }
 
     #[inline]
     fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut *self.as_filelike_view::<std::fs::File>(), fmt)
+        Write::write_fmt(&mut &*self.as_filelike_view::<std::fs::File>(), fmt)
     }
 
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
-        Seek::seek(&mut *self.as_filelike_view::<std::fs::File>(), pos)
+        Seek::seek(&mut &*self.as_filelike_view::<std::fs::File>(), pos)
     }
 
     #[inline]
@@ -818,7 +818,7 @@ impl<T: AsFilelike> FileIoExt for T {
         // This may eventually be obsoleted by [rust-lang/rust#59359].
         // [rust-lang/rust#59359]: https://github.com/rust-lang/rust/issues/59359.
         Seek::seek(
-            &mut *self.as_filelike_view::<std::fs::File>(),
+            &mut &*self.as_filelike_view::<std::fs::File>(),
             SeekFrom::Current(0),
         )
     }

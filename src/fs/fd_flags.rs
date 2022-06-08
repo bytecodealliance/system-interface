@@ -10,7 +10,7 @@ use {
     cap_fs_ext::{OpenOptions, Reopen},
     io_lifetimes::AsHandle,
     std::os::windows::fs::OpenOptionsExt,
-    winapi::um::winbase::FILE_FLAG_WRITE_THROUGH,
+    windows_sys::Win32::Storage::FileSystem::FILE_FLAG_WRITE_THROUGH,
     winx::file::{AccessMode, FileModeInformation},
 };
 
