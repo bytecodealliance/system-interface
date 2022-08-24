@@ -105,6 +105,15 @@ impl IsTerminal for cap_std::fs::File {
     }
 }
 
+/// Implement `IsTerminal` for `cap_std::fs_utf8::File`.
+#[cfg(all(windows, feature = "cap_std_impls_fs_utf8"))]
+impl IsTerminal for cap_std::fs_utf8::File {
+    #[inline]
+    fn is_terminal(&self) -> bool {
+        false
+    }
+}
+
 /// Implement `IsTerminal` for `cap_std::net::TcpStream`.
 #[cfg(all(windows, feature = "cap_std_impls"))]
 impl IsTerminal for cap_std::net::TcpStream {

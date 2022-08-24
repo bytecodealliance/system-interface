@@ -6,6 +6,7 @@ use std::io::{self, IoSlice, IoSliceMut};
 #[cfg(any(not(windows), feature = "cap_std_impls"))]
 use sys_common::io::tmpdir;
 use system_interface::fs::FileIoExt;
+use system_interface::io::IoExt;
 
 #[cfg(any(not(windows), feature = "cap_std_impls"))]
 #[test]

@@ -5,6 +5,7 @@ use std::fs::{rename, File, OpenOptions};
 #[cfg(not(racy_asserts))] // racy asserts are racy
 use std::thread;
 use system_interface::fs::FileIoExt;
+use system_interface::io::IoExt;
 
 /// Ensure that `read_at` works even when the underlying file is renamed.
 #[test]

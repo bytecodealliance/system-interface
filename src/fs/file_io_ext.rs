@@ -1,3 +1,4 @@
+use crate::io::IoExt;
 use io_lifetimes::AsFilelike;
 #[cfg(not(any(
     windows,
@@ -20,8 +21,7 @@ use rustix::fs::{fallocate, FallocateFlags};
 #[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
 use rustix::io::{preadv, pwritev};
 use std::convert::TryInto;
-use std::fmt::Arguments;
-use std::io::{self, IoSlice, IoSliceMut, Read, Seek, SeekFrom, Write};
+use std::io::{self, IoSlice, IoSliceMut, Seek, SeekFrom};
 use std::slice;
 #[cfg(windows)]
 use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt};
@@ -80,30 +80,13 @@ pub enum Advice {
 }
 
 /// Extension trait for `std::fs::File` and `cap_std::fs::File`.
-pub trait FileIoExt {
+pub trait FileIoExt: IoExt {
     /// Announce the expected access pattern of the data at the given offset.
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()>;
 
     /// Allocate space in the file, increasing the file size as needed, and
     /// ensuring that there are no holes under the given range.
     fn allocate(&self, offset: u64, len: u64) -> io::Result<()>;
-
-    /// Pull some bytes from this source into the specified buffer, returning
-    /// how many bytes were read.
-    ///
-    /// This is similar to [`std::io::Read::read`], except it takes `self` by
-    /// immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Read::read`]: https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read
-    fn read(&self, buf: &mut [u8]) -> io::Result<usize>;
-
-    /// Read the exact number of bytes required to fill `buf`.
-    ///
-    /// This is similar to [`std::io::Read::read_exact`], except it takes
-    /// `self` by immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Read::read_exact`]: https://doc.rust-lang.org/std/io/trait.Read.html#tymethod.read_exact
-    fn read_exact(&self, buf: &mut [u8]) -> io::Result<()>;
 
     /// Reads a number of bytes starting from a given offset.
     ///
@@ -124,34 +107,6 @@ pub trait FileIoExt {
     ///
     /// [`std::os::unix::fs::FileExt::read_exact_at`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html#tymethod.read_exact_at
     fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()>;
-
-    /// Like `read`, except that it reads into a slice of buffers.
-    ///
-    /// This is similar to [`std::io::Read::read_vectored`], except it takes
-    /// `self` by immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Read::read_vectored`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.read_vectored
-    fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize>;
-
-    /// Is to `read_vectored` what `read_exact` is to `read`.
-    fn read_exact_vectored(&self, mut bufs: &mut [IoSliceMut]) -> io::Result<()> {
-        bufs = skip_leading_empties(bufs);
-        while !bufs.is_empty() {
-            match self.read_vectored(bufs) {
-                Ok(0) => {
-                    return Err(io::Error::new(
-                        io::ErrorKind::UnexpectedEof,
-                        "failed to fill whole buffer",
-                    ))
-                }
-                Ok(nread) => bufs = advance_mut(bufs, nread),
-                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
-                Err(e) => return Err(e),
-            }
-            bufs = skip_leading_empties(bufs);
-        }
-        Ok(())
-    }
 
     /// Is to `read_vectored` what `read_at` is to `read`.
     fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
@@ -198,49 +153,13 @@ pub trait FileIoExt {
         false
     }
 
-    /// Read all bytes until EOF in this source, placing them into `buf`.
-    ///
-    /// This is similar to [`std::io::Read::read_to_end`], except it takes
-    /// `self` by immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Read::read_to_end`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.read_to_end
-    fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize>;
-
     /// Read all bytes, starting at `offset`, until EOF in this source, placing
     /// them into `buf`.
     fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize>;
 
-    /// Read all bytes until EOF in this source, appending them to `buf`.
-    ///
-    /// This is similar to [`std::io::Read::read_to_string`], except it takes
-    /// `self` by immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Read::read_to_string`]: https://doc.rust-lang.org/std/io/trait.Read.html#method.read_to_string
-    fn read_to_string(&self, buf: &mut String) -> io::Result<usize>;
-
     /// Read all bytes, starting at `offset`, until EOF in this source,
     /// appending them to `buf`.
     fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize>;
-
-    /// Read bytes from the current position without advancing the current
-    /// position.
-    fn peek(&self, buf: &mut [u8]) -> io::Result<usize>;
-
-    /// Write a buffer into this writer, returning how many bytes were written.
-    ///
-    /// This is similar to [`std::io::Write::write`], except it takes `self` by
-    /// immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Write::write`]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write
-    fn write(&self, buf: &[u8]) -> io::Result<usize>;
-
-    /// Attempts to write an entire buffer into this writer.
-    ///
-    /// This is similar to [`std::io::Write::write_all`], except it takes
-    /// `self` by immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Write::write_all`]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write_all
-    fn write_all(&self, buf: &[u8]) -> io::Result<()>;
 
     /// Writes a number of bytes starting from a given offset.
     ///
@@ -259,28 +178,6 @@ pub trait FileIoExt {
     ///
     /// [`std::os::unix::fs::FileExt::write_all_at`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html#tymethod.write_all_at
     fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()>;
-
-    /// Like `write`, except that it writes from a slice of buffers.
-    ///
-    /// This is similar to [`std::io::Write::write_vectored`], except it takes
-    /// `self` by immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Write::write_vectored`]: https://doc.rust-lang.org/std/io/trait.Write.html#method.write_vectored
-    fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize>;
-
-    /// Is to `write_vectored` what `write_all` is to `write`.
-    fn write_all_vectored(&self, mut bufs: &mut [IoSlice]) -> io::Result<()> {
-        // TODO: Use [rust-lang/rust#70436] once it stabilizes.
-        // [rust-lang/rust#70436]: https://github.com/rust-lang/rust/issues/70436
-        while !bufs.is_empty() {
-            match self.write_vectored(bufs) {
-                Ok(nwritten) => bufs = advance(bufs, nwritten),
-                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
-                Err(e) => return Err(e),
-            }
-        }
-        Ok(())
-    }
 
     /// Is to `write_vectored` what `write_at` is to `write`.
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
@@ -314,24 +211,6 @@ pub trait FileIoExt {
     fn is_write_vectored_at(&self) -> bool {
         false
     }
-
-    /// Writes a formatted string into this writer, returning any error
-    /// encountered.
-    ///
-    /// This is similar to [`std::io::Write::write_fmt`], except it takes
-    /// `self` by immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Write::write_fmt`]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.write_fmt
-    fn write_fmt(&self, fmt: Arguments) -> io::Result<()>;
-
-    /// Flush this output stream, ensuring that all intermediately buffered
-    /// contents reach their destination.
-    ///
-    /// This is similar to [`std::io::Write::flush`], except it takes `self` by
-    /// immutable reference since the entire side effect is I/O.
-    ///
-    /// [`std::io::Write::flush`]: https://doc.rust-lang.org/std/io/trait.Write.html#tymethod.flush
-    fn flush(&self) -> io::Result<()>;
 
     /// Seek to an offset, in bytes, in a stream.
     ///
@@ -430,7 +309,7 @@ fn advance_mut<'a, 'b>(bufs: &'b mut [IoSliceMut<'a>], n: usize) -> &'b mut [IoS
 
 /// Implement `FileIoExt` for any type which implements `AsRawFd`.
 #[cfg(not(windows))]
-impl<T: AsFilelike> FileIoExt for T {
+impl<T: AsFilelike + IoExt> FileIoExt for T {
     #[cfg(not(any(
         target_os = "ios",
         target_os = "macos",
@@ -499,16 +378,6 @@ impl<T: AsFilelike> FileIoExt for T {
     }
 
     #[inline]
-    fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
-    fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
     fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
         FileExt::read_at(&*self.as_filelike_view::<std::fs::File>(), buf, offset)
     }
@@ -516,11 +385,6 @@ impl<T: AsFilelike> FileIoExt for T {
     #[inline]
     fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
         FileExt::read_exact_at(&*self.as_filelike_view::<std::fs::File>(), buf, offset)
-    }
-
-    #[inline]
-    fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
     }
 
     #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
@@ -536,39 +400,13 @@ impl<T: AsFilelike> FileIoExt for T {
     }
 
     #[inline]
-    fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
     fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
         read_to_end_at(&self.as_filelike_view::<std::fs::File>(), buf, offset)
     }
 
     #[inline]
-    fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
     fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
         read_to_string_at(&self.as_filelike_view::<std::fs::File>(), buf, offset)
-    }
-
-    #[inline]
-    fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let pos = self.seek(SeekFrom::Current(0))?;
-        self.read_at(buf, pos)
-    }
-
-    #[inline]
-    fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
-    fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -581,11 +419,6 @@ impl<T: AsFilelike> FileIoExt for T {
         FileExt::write_all_at(&*self.as_filelike_view::<std::fs::File>(), buf, offset)
     }
 
-    #[inline]
-    fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
-    }
-
     #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
     #[inline]
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
@@ -596,16 +429,6 @@ impl<T: AsFilelike> FileIoExt for T {
     #[inline]
     fn is_write_vectored_at(&self) -> bool {
         true
-    }
-
-    #[inline]
-    fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut &*self.as_filelike_view::<std::fs::File>())
-    }
-
-    #[inline]
-    fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut &*self.as_filelike_view::<std::fs::File>(), fmt)
     }
 
     #[inline]
@@ -622,7 +445,7 @@ impl<T: AsFilelike> FileIoExt for T {
 }
 
 #[cfg(windows)]
-impl<T: AsFilelike> FileIoExt for T {
+impl FileIoExt for std::fs::File {
     #[inline]
     fn advise(&self, _offset: u64, _len: u64, _advice: Advice) -> io::Result<()> {
         // TODO: Do something with the advice.
@@ -637,16 +460,6 @@ impl<T: AsFilelike> FileIoExt for T {
             io::ErrorKind::PermissionDenied,
             "file allocate is not supported on Windows",
         ))
-    }
-
-    #[inline]
-    fn read(&self, buf: &mut [u8]) -> io::Result<usize> {
-        Read::read(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
-    fn read_exact(&self, buf: &mut [u8]) -> io::Result<()> {
-        Read::read_exact(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -676,11 +489,6 @@ impl<T: AsFilelike> FileIoExt for T {
             }
         }
         reopened.read_exact(buf)
-    }
-
-    #[inline]
-    fn read_vectored(&self, bufs: &mut [IoSliceMut]) -> io::Result<usize> {
-        Read::read_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
     }
 
     #[inline]
@@ -719,39 +527,13 @@ impl<T: AsFilelike> FileIoExt for T {
     }
 
     #[inline]
-    fn read_to_end(&self, buf: &mut Vec<u8>) -> io::Result<usize> {
-        Read::read_to_end(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
     fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
         read_to_end_at(&self.as_filelike_view::<std::fs::File>(), buf, offset)
     }
 
     #[inline]
-    fn read_to_string(&self, buf: &mut String) -> io::Result<usize> {
-        Read::read_to_string(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
     fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
         read_to_string_at(&self.as_filelike_view::<std::fs::File>(), buf, offset)
-    }
-
-    #[inline]
-    fn peek(&self, buf: &mut [u8]) -> io::Result<usize> {
-        let reopened = reopen_write(self)?;
-        reopened.read(buf)
-    }
-
-    #[inline]
-    fn write(&self, buf: &[u8]) -> io::Result<usize> {
-        Write::write(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
-    }
-
-    #[inline]
-    fn write_all(&self, buf: &[u8]) -> io::Result<()> {
-        Write::write_all(&mut &*self.as_filelike_view::<std::fs::File>(), buf)
     }
 
     #[inline]
@@ -781,11 +563,6 @@ impl<T: AsFilelike> FileIoExt for T {
             }
         }
         reopened.write_all(buf)
-    }
-
-    #[inline]
-    fn write_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        Write::write_vectored(&mut &*self.as_filelike_view::<std::fs::File>(), bufs)
     }
 
     #[inline]
@@ -824,16 +601,6 @@ impl<T: AsFilelike> FileIoExt for T {
     }
 
     #[inline]
-    fn flush(&self) -> io::Result<()> {
-        Write::flush(&mut &*self.as_filelike_view::<std::fs::File>())
-    }
-
-    #[inline]
-    fn write_fmt(&self, fmt: Arguments) -> io::Result<()> {
-        Write::write_fmt(&mut &*self.as_filelike_view::<std::fs::File>(), fmt)
-    }
-
-    #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
         Seek::seek(&mut &*self.as_filelike_view::<std::fs::File>(), pos)
     }
@@ -846,6 +613,202 @@ impl<T: AsFilelike> FileIoExt for T {
             &mut &*self.as_filelike_view::<std::fs::File>(),
             SeekFrom::Current(0),
         )
+    }
+}
+
+#[cfg(windows)]
+#[cfg(feature = "cap_std_impls")]
+impl FileIoExt for cap_std::fs::File {
+    #[inline]
+    fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .advise(offset, len, advice)
+    }
+
+    #[inline]
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .allocate(offset, len)
+    }
+
+    #[inline]
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_exact_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn read_exact_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_exact_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn is_read_vectored_at(&self) -> bool {
+        self.as_filelike_view::<std::fs::File>()
+            .is_read_vectored_at()
+    }
+
+    #[inline]
+    fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_to_end_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_to_string_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_all_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn write_all_vectored_at(&self, bufs: &mut [IoSlice], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_all_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn is_write_vectored_at(&self) -> bool {
+        self.as_filelike_view::<std::fs::File>()
+            .is_write_vectored_at()
+    }
+
+    #[inline]
+    fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
+        self.as_filelike_view::<std::fs::File>().seek(pos)
+    }
+
+    #[inline]
+    fn stream_position(&self) -> io::Result<u64> {
+        self.as_filelike_view::<std::fs::File>().stream_position()
+    }
+}
+
+#[cfg(windows)]
+#[cfg(feature = "cap_std_impls_fs_utf8")]
+impl FileIoExt for cap_std::fs_utf8::File {
+    #[inline]
+    fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .advise(offset, len, advice)
+    }
+
+    #[inline]
+    fn allocate(&self, offset: u64, len: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .allocate(offset, len)
+    }
+
+    #[inline]
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_exact_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn read_exact_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_exact_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn is_read_vectored_at(&self) -> bool {
+        self.as_filelike_view::<std::fs::File>()
+            .is_read_vectored_at()
+    }
+
+    #[inline]
+    fn read_to_end_at(&self, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_to_end_at(buf, offset)
+    }
+
+    #[inline]
+    fn read_to_string_at(&self, buf: &mut String, offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .read_to_string_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_all_at(buf, offset)
+    }
+
+    #[inline]
+    fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn write_all_vectored_at(&self, bufs: &mut [IoSlice], offset: u64) -> io::Result<()> {
+        self.as_filelike_view::<std::fs::File>()
+            .write_all_vectored_at(bufs, offset)
+    }
+
+    #[inline]
+    fn is_write_vectored_at(&self) -> bool {
+        self.as_filelike_view::<std::fs::File>()
+            .is_write_vectored_at()
+    }
+
+    #[inline]
+    fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
+        self.as_filelike_view::<std::fs::File>().seek(pos)
+    }
+
+    #[inline]
+    fn stream_position(&self) -> io::Result<u64> {
+        self.as_filelike_view::<std::fs::File>().stream_position()
     }
 }
 

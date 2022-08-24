@@ -65,12 +65,35 @@ impl ReadReady for net::TcpStream {
 }
 
 /// Implement `ReadReady` for `std::net::TcpStream`.
+#[cfg(not(any(windows, target_os = "redox")))]
+#[cfg(feature = "cap_std_impls")]
+impl ReadReady for cap_std::net::TcpStream {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        use io_lifetimes::AsSocketlike;
+        self.as_socketlike_view::<net::TcpStream>()
+            .num_ready_bytes()
+    }
+}
+
+/// Implement `ReadReady` for `std::net::TcpStream`.
 #[cfg(target_os = "redox")]
 impl ReadReady for net::TcpStream {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
         // Return the conservatively correct result.
         Ok(0)
+    }
+}
+
+/// Implement `ReadReady` for `std::net::TcpStream`.
+#[cfg(target_os = "redox")]
+impl ReadReady for cap_std::net::TcpStream {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        use io_lifetimes::AsSocketlike;
+        self.as_socketlike_view::<net::TcpStream>()
+            .num_ready_bytes()
     }
 }
 
@@ -94,6 +117,17 @@ impl ReadReady for net::TcpStream {
         } else {
             Err(io::Error::last_os_error())
         }
+    }
+}
+
+/// Implement `ReadReady` for `std::net::TcpStream`.
+#[cfg(windows)]
+impl ReadReady for cap_std::net::TcpStream {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        use io_lifetimes::AsSocketlike;
+        self.as_socketlike_view::<net::TcpStream>()
+            .num_ready_bytes()
     }
 }
 

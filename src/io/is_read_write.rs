@@ -43,8 +43,8 @@ impl IsReadWrite for cap_std::fs::File {
     }
 }
 
-#[cfg(all(windows, feature = "fs_utf8"))]
-impl IsReadWrite for std::fs_utf8::File {
+#[cfg(all(windows, feature = "cap_std_impls_fs_utf8"))]
+impl IsReadWrite for cap_std::fs_utf8::File {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
         use io_lifetimes::AsFilelike;
