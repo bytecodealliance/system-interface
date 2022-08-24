@@ -3,6 +3,7 @@ mod sys_common;
 
 use std::fs::OpenOptions;
 use system_interface::fs::FileIoExt;
+use system_interface::io::IoExt;
 
 #[test]
 fn read_to_end_at() {

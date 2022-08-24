@@ -1,5 +1,7 @@
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, StdinLock, Take};
+use std::io::{
+    self, BufRead, BufReader, Chain, Cursor, Empty, Read, Repeat, Seek, SeekFrom, StdinLock, Take,
+};
 use std::net::TcpStream;
 #[cfg(unix)]
 use std::os::unix::net::UnixStream;
@@ -26,7 +28,8 @@ pub trait Peek {
 impl Peek for File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        crate::fs::FileIoExt::peek(self, buf)
+        let pos = self.seek(SeekFrom::Current(0))?;
+        crate::fs::FileIoExt::read_at(self, buf, pos)
     }
 }
 
@@ -34,7 +37,8 @@ impl Peek for File {
 impl Peek for cap_std::fs::File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        crate::fs::FileIoExt::peek(self, buf)
+        let pos = self.seek(SeekFrom::Current(0))?;
+        crate::fs::FileIoExt::read_at(self, buf, pos)
     }
 }
 
@@ -42,7 +46,8 @@ impl Peek for cap_std::fs::File {
 impl Peek for cap_std::fs_utf8::File {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        crate::fs::FileIoExt::peek(self, buf)
+        let pos = self.seek(SeekFrom::Current(0))?;
+        crate::fs::FileIoExt::read_at(self, buf, pos)
     }
 }
 
