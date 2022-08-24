@@ -2,7 +2,7 @@
 mod sys_common;
 
 use std::fs::OpenOptions;
-use std::io::{IoSlice, IoSliceMut};
+use std::io::{self, IoSlice, IoSliceMut};
 #[cfg(any(not(windows), feature = "cap_std_impls"))]
 use sys_common::io::tmpdir;
 use system_interface::fs::FileIoExt;
@@ -28,6 +28,30 @@ fn cap_read_exact_vectored_at() {
     assert_eq!(&buf1, b"mnopqrst");
 }
 
+/// Like `cap_read_exact_vectored_at`, but with an unexpected EOF error.
+#[cfg(any(not(windows), feature = "cap_std_impls"))]
+#[test]
+fn cap_read_exact_vectored_at_unexpected_eof() {
+    let tmpdir = tmpdir();
+    let file = check!(tmpdir.open_with(
+        "file",
+        cap_std::fs::OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+    ));
+    check!(write!(&file, "abcdefghijkl"));
+    let mut buf0 = vec![0; 8];
+    let mut buf1 = vec![0; 8];
+    let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
+    assert_eq!(
+        file.read_exact_vectored_at(&mut bufs, 4)
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::UnexpectedEof
+    );
+}
+
 #[test]
 fn read_exact_vectored_at() {
     let dir = tempfile::tempdir().unwrap();
@@ -44,6 +68,27 @@ fn read_exact_vectored_at() {
     assert_eq!(check!(file.stream_position()), 26);
     assert_eq!(&buf0, b"efghijkl");
     assert_eq!(&buf1, b"mnopqrst");
+}
+
+/// Like `read_exact_vectored_at`, but with an unexpected EOF error.
+#[test]
+fn read_exact_vectored_at_unexpected_eof() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = check!(OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(dir.path().join("file")));
+    check!(write!(&file, "abcdefghijkl"));
+    let mut buf0 = vec![0; 8];
+    let mut buf1 = vec![0; 8];
+    let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
+    assert_eq!(
+        file.read_exact_vectored_at(&mut bufs, 4)
+            .unwrap_err()
+            .kind(),
+        io::ErrorKind::UnexpectedEof
+    );
 }
 
 #[test]
@@ -87,6 +132,23 @@ fn read_exact_at() {
     assert_eq!(&buf1, b"mnopqrst");
 }
 
+/// Like `read_exact_at`, but with an unexpected EOF error.
+#[test]
+fn read_exact_at_unexpected_eof() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = check!(OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(dir.path().join("file")));
+    check!(write!(&file, "abcdefghijkl"));
+    let mut buf1 = vec![0; 8];
+    assert_eq!(
+        file.read_exact_at(&mut buf1, 12).unwrap_err().kind(),
+        io::ErrorKind::UnexpectedEof
+    );
+}
+
 #[test]
 fn read_exact_vectored() {
     let dir = tempfile::tempdir().unwrap();
@@ -104,6 +166,26 @@ fn read_exact_vectored() {
     assert_eq!(check!(file.stream_position()), 20);
     assert_eq!(&buf0, b"efghijkl");
     assert_eq!(&buf1, b"mnopqrst");
+}
+
+/// Like `read_exact_vectored`, but with an unexpected EOF error.
+#[test]
+fn read_exact_vectored_unexpected_eof() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = check!(OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(dir.path().join("file")));
+    check!(write!(&file, "abcdefghijkl"));
+    let mut buf0 = vec![0; 8];
+    let mut buf1 = vec![0; 8];
+    let mut bufs = vec![IoSliceMut::new(&mut buf0), IoSliceMut::new(&mut buf1)];
+    check!(file.seek(std::io::SeekFrom::Start(4)));
+    assert_eq!(
+        file.read_exact_vectored(&mut bufs).unwrap_err().kind(),
+        io::ErrorKind::UnexpectedEof
+    );
 }
 
 #[test]

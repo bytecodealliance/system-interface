@@ -135,13 +135,20 @@ pub trait FileIoExt {
 
     /// Is to `read_vectored` what `read_exact` is to `read`.
     fn read_exact_vectored(&self, mut bufs: &mut [IoSliceMut]) -> io::Result<()> {
+        bufs = skip_leading_empties(bufs);
         while !bufs.is_empty() {
             match self.read_vectored(bufs) {
-                Ok(0) => break,
+                Ok(0) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        "failed to fill whole buffer",
+                    ))
+                }
                 Ok(nread) => bufs = advance_mut(bufs, nread),
                 Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
                 Err(e) => return Err(e),
             }
+            bufs = skip_leading_empties(bufs);
         }
         Ok(())
     }
@@ -161,9 +168,15 @@ pub trait FileIoExt {
         mut bufs: &mut [IoSliceMut],
         mut offset: u64,
     ) -> io::Result<()> {
+        bufs = skip_leading_empties(bufs);
         while !bufs.is_empty() {
             match self.read_vectored_at(bufs, offset) {
-                Ok(0) => break,
+                Ok(0) => {
+                    return Err(io::Error::new(
+                        io::ErrorKind::UnexpectedEof,
+                        "failed to fill whole buffer",
+                    ))
+                }
                 Ok(nread) => {
                     offset = offset
                         .checked_add(nread.try_into().unwrap())
@@ -173,6 +186,7 @@ pub trait FileIoExt {
                 Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
                 Err(e) => return Err(e),
             }
+            bufs = skip_leading_empties(bufs);
         }
         Ok(())
     }
@@ -337,6 +351,17 @@ pub trait FileIoExt {
     /// [`std::io::Seek::stream_position`]: https://doc.rust-lang.org/std/io/trait.Seek.html#method.stream_position
     /// [rust-lang/rust#62726]: https://github.com/rust-lang/rust/issues/59359.
     fn stream_position(&self) -> io::Result<u64>;
+}
+
+/// Skip any leading elements in `bufs` which are empty buffers.
+fn skip_leading_empties<'a, 'b>(mut bufs: &'b mut [IoSliceMut<'a>]) -> &'b mut [IoSliceMut<'a>] {
+    while !bufs.is_empty() {
+        if !bufs[0].is_empty() {
+            break;
+        }
+        bufs = &mut bufs[1..];
+    }
+    bufs
 }
 
 /// This will be obviated by [rust-lang/rust#62726].
