@@ -101,7 +101,7 @@ jobs:
         include:
           - build: nightly
             os: ubuntu-latest
-            rust: nightly
+            rust: nightly-2022-07-13
 
     steps:
     - uses: actions/checkout@v2
@@ -241,10 +241,10 @@ jobs:
         include:
           - build: ubuntu
             os: ubuntu-latest
-            rust: nightly
+            rust: nightly-2022-07-13
           - build: windows
             os: windows-latest
-            rust: nightly
+            rust: nightly-2022-07-13
 
     steps:
     - uses: actions/checkout@v2
