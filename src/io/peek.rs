@@ -93,7 +93,7 @@ impl Peek for socketpair::SocketpairStream {
     }
 }
 
-impl<'a> Peek for Empty {
+impl Peek for Empty {
     #[inline]
     fn peek(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         peek_from_bufread(self, buf)
