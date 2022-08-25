@@ -122,6 +122,7 @@ impl ReadReady for net::TcpStream {
 
 /// Implement `ReadReady` for `std::net::TcpStream`.
 #[cfg(windows)]
+#[cfg(feature = "cap_std_impls")]
 impl ReadReady for cap_std::net::TcpStream {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
