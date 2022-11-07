@@ -134,20 +134,25 @@ jobs:
         i686-pc-windows-gnu
         x86_64-fuchsia
         wasm32-unknown-emscripten
+    # socket2, cap_async_std_impls, and cap_async_std_impls_fs_utf8 temporarily
+    # disabled until I/O safety trait impls are available
     - run: cargo check --workspace --all-targets --all-features --release -vv
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=x86_64-unknown-linux-musl
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=x86_64-unknown-linux-gnux32
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=x86_64-linux-android
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=x86_64-apple-darwin
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=x86_64-unknown-freebsd
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=x86_64-unknown-netbsd
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=i686-unknown-linux-gnu
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair,cap_async_std_impls,cap_async_std_impls_fs_utf8 --release -vv --target=i686-unknown-linux-musl
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=x86_64-pc-windows-msvc
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=x86_64-pc-windows-gnu
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=i686-pc-windows-msvc
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=i686-pc-windows-gnu
-    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,use_socket2,socketpair --release -vv --target=x86_64-fuchsia
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-unknown-linux-musl
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-unknown-linux-gnux32
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-linux-android
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-apple-darwin
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-unknown-freebsd
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-unknown-netbsd
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=i686-unknown-linux-gnu
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=i686-unknown-linux-musl
+
+    # socket2 temporarily disabled until I/O safety trait impls are available
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-pc-windows-msvc
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-pc-windows-gnu
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=i686-pc-windows-msvc
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=i686-pc-windows-gnu
+    - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-fuchsia
+
     # socket2 doesn't yet support wasm32-unknown-emscripten
     - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=wasm32-unknown-emscripten
 
