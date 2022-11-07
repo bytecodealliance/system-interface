@@ -42,6 +42,9 @@ used with regular [`std`] too. To separate concerns, all sandboxing and
 capability-oriented APIs are left to `cap-std`, so this crate's features are
 usable independently.
 
+Support for async-std and socket2 is temporarily disabled until those crates
+contain the needed implementations of the I/O safety traits.
+
 [`std`]: https://doc.rust-lang.org/std/
 [`cap-std`]: https://crates.io/crates/cap-std
 [WASI]: https://github.com/WebAssembly/WASI/
