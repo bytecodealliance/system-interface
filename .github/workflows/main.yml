@@ -11,7 +11,7 @@ jobs:
     name: Rustfmt
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -34,7 +34,7 @@ jobs:
             rust: beta
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -104,7 +104,7 @@ jobs:
             rust: nightly-2022-07-13
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -194,7 +194,7 @@ jobs:
             qemu_target: aarch64-linux-user
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -252,7 +252,7 @@ jobs:
             rust: nightly-2022-07-13
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
@@ -274,7 +274,7 @@ jobs:
             rust: stable
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         submodules: true
     - uses: ./.github/actions/install-rust
