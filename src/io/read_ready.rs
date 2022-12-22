@@ -14,6 +14,10 @@ use {
 /// ready to be read immediately.
 pub trait ReadReady {
     /// Return the number of bytes which are ready to be read immediately.
+    ///
+    /// The returned number may be greater than the number of bytes actually
+    /// readable if the end of the stream is known to be reachable without
+    /// blocking.
     fn num_ready_bytes(&self) -> io::Result<u64>;
 }
 
@@ -103,6 +107,91 @@ impl ReadReady for std::os::unix::net::UnixStream {
     #[inline]
     fn num_ready_bytes(&self) -> io::Result<u64> {
         Ok(ioctl_fionread(self)?)
+    }
+}
+
+/// Implement `ReadReady` for `&[u8]`.
+impl ReadReady for &[u8] {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        Ok(self.len() as u64)
+    }
+}
+
+/// Implement `ReadReady` for `std::io::Empty`.
+impl ReadReady for std::io::Empty {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        // Empty has zero bytes, but say 1 so that consumers know that they
+        // can immediately attempt to read 1 byte and it won't block.
+        Ok(1)
+    }
+}
+
+/// Implement `ReadReady` for `std::io::Repeat`.
+impl ReadReady for std::io::Repeat {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        // Unlimited bytes available immediately.
+        Ok(u64::MAX)
+    }
+}
+
+/// Implement `ReadReady` for `std::collections::VecDeque<T>`.
+impl<T> ReadReady for std::collections::VecDeque<T> {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        Ok(self.len() as u64)
+    }
+}
+
+/// Implement `ReadReady` for `Box`.
+impl<R: ReadReady> ReadReady for Box<R> {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        self.as_ref().num_ready_bytes()
+    }
+}
+
+/// Implement `ReadReady` for `std::io::BufReader<R>`.
+impl<R: std::io::Read + ReadReady> ReadReady for std::io::BufReader<R> {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        let buffer = self.buffer();
+        match self.get_ref().num_ready_bytes() {
+            Ok(n) => Ok(buffer.len() as u64 + n),
+            Err(_) if !buffer.is_empty() => Ok(buffer.len() as u64),
+            Err(e) => Err(e),
+        }
+    }
+}
+
+/// Implement `ReadReady` for `std::io::Cursor<T>`.
+impl<T: AsRef<[u8]>> ReadReady for std::io::Cursor<T> {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        Ok(self.get_ref().as_ref().len() as u64 - self.position())
+    }
+}
+
+/// Implement `ReadReady` for `std::io::Take<T>`.
+impl<T: ReadReady> ReadReady for std::io::Take<T> {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        Ok(std::cmp::min(
+            self.limit(),
+            self.get_ref().num_ready_bytes()?,
+        ))
+    }
+}
+
+/// Implement `ReadReady` for `std::io::Chain<T, U>`.
+impl<T: ReadReady, U> ReadReady for std::io::Chain<T, U> {
+    #[inline]
+    fn num_ready_bytes(&self) -> io::Result<u64> {
+        // Just return the ready bytes for the first source, since we don't
+        // know if it'll block before we exhaust it and move to the second.
+        self.get_ref().0.num_ready_bytes()
     }
 }
 
