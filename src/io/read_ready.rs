@@ -14,6 +14,10 @@ use {
 /// ready to be read immediately.
 pub trait ReadReady {
     /// Return the number of bytes which are ready to be read immediately.
+    ///
+    /// The returned number may be greater than the number of bytes actually
+    /// readable if the end of the stream is known to be reachable without
+    /// blocking.
     fn num_ready_bytes(&self) -> io::Result<u64>;
 }
 
