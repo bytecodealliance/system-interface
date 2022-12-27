@@ -1,3 +1,5 @@
+//! The `FileIoExt` trait, and related utilities and impls.
+
 use crate::io::IoExt;
 use io_lifetimes::AsFilelike;
 #[cfg(not(any(
@@ -110,6 +112,7 @@ pub trait FileIoExt: IoExt {
 
     /// Is to `read_vectored` what `read_at` is to `read`.
     fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
+        // By default, just read into the first non-empty slice.
         let buf = bufs
             .iter_mut()
             .find(|b| !b.is_empty())
@@ -146,8 +149,8 @@ pub trait FileIoExt: IoExt {
         Ok(())
     }
 
-    /// Determines if this `Read`er has an efficient `read_vectored_at`
-    /// implementation.
+    /// Determines if this `FileIoExt` implementation has an efficient
+    /// `read_vectored_at` implementation.
     #[inline]
     fn is_read_vectored_at(&self) -> bool {
         false
@@ -167,6 +170,10 @@ pub trait FileIoExt: IoExt {
     /// takes `self` by immutable reference since the entire side effect is
     /// I/O, and it's supported on non-Unix platforms including Windows.
     ///
+    /// Contrary to POSIX, on many popular platforms including Linux and
+    /// FreeBSD, if the file is opened in append mode, this ignores the offset
+    /// appends the data to the end of the file.
+    ///
     /// [`std::os::unix::fs::FileExt::write_at`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html#tymethod.write_at
     fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize>;
 
@@ -176,11 +183,28 @@ pub trait FileIoExt: IoExt {
     /// it takes `self` by immutable reference since the entire side effect is
     /// I/O, and it's supported on non-Unix platforms including Windows.
     ///
+    /// Contrary to POSIX, on many popular platforms including Linux and
+    /// FreeBSD, if the file is opened in append mode, this ignores the offset
+    /// appends the data to the end of the file.
+    ///
     /// [`std::os::unix::fs::FileExt::write_all_at`]: https://doc.rust-lang.org/std/os/unix/fs/trait.FileExt.html#tymethod.write_all_at
-    fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()>;
+    fn write_all_at(&self, mut buf: &[u8], mut offset: u64) -> io::Result<()> {
+        while !buf.is_empty() {
+            match self.write_at(buf, offset) {
+                Ok(nwritten) => {
+                    buf = &buf[nwritten..];
+                    offset += nwritten as u64;
+                }
+                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    }
 
     /// Is to `write_vectored` what `write_at` is to `write`.
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
+        // By default, just write the first non-empty slice.
         let buf = bufs
             .iter()
             .find(|b| !b.is_empty())
@@ -205,10 +229,74 @@ pub trait FileIoExt: IoExt {
         Ok(())
     }
 
-    /// Determines if this `Write`r has an efficient `write_vectored_at`
-    /// implementation.
+    /// Determines if this `FileIoExt` implementation has an efficient
+    /// `write_vectored_at` implementation.
     #[inline]
     fn is_write_vectored_at(&self) -> bool {
+        false
+    }
+
+    /// Writes a number of bytes at the end of a file.
+    ///
+    /// This leaves the current position of the file unmodified.
+    ///
+    /// This operation is not guaranteed to be atomic with respect to other
+    /// users of the same open file description.
+    ///
+    /// This operation is less efficient on some platforms than opening the
+    /// file in append mode and doing regular writes.
+    fn append(&self, buf: &[u8]) -> io::Result<usize>;
+
+    /// Attempts to write an entire buffer at the end of a file.
+    ///
+    /// This leaves the current position of the file unmodified.
+    ///
+    /// This operation is not guaranteed to be atomic with respect to other
+    /// users of the same open file description.
+    ///
+    /// This operation is less efficient on some platforms than opening the
+    /// file in append mode and doing regular writes.
+    fn append_all(&self, mut buf: &[u8]) -> io::Result<()> {
+        while !buf.is_empty() {
+            match self.append(buf) {
+                Ok(nwritten) => {
+                    buf = &buf[nwritten..];
+                }
+                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    }
+
+    /// Is to `append` what `write_vectored` is to `write`.
+    fn append_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
+        // By default, just append the first non-empty slice.
+        let buf = bufs
+            .iter()
+            .find(|b| !b.is_empty())
+            .map_or(&[][..], |b| &**b);
+        self.append(buf)
+    }
+
+    /// Is to `append_all` what `write_all_vectored` is to `write_all`.
+    fn append_all_vectored(&self, mut bufs: &mut [IoSlice]) -> io::Result<()> {
+        while !bufs.is_empty() {
+            match self.append_vectored(bufs) {
+                Ok(nwritten) => {
+                    bufs = advance(bufs, nwritten);
+                }
+                Err(ref e) if e.kind() == io::ErrorKind::Interrupted => (),
+                Err(e) => return Err(e),
+            }
+        }
+        Ok(())
+    }
+
+    /// Determines if this `FileIoExt` implementation has an efficient
+    /// `append_vectored` implementation.
+    #[inline]
+    fn is_append_vectored(&self) -> bool {
         false
     }
 
@@ -431,6 +519,72 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         true
     }
 
+    fn append(&self, buf: &[u8]) -> io::Result<usize> {
+        use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags};
+        use rustix::io::write;
+
+        // On Linux, use `pwritev2`.
+        #[cfg(any(target_os = "android", target_os = "linux"))]
+        {
+            use rustix::io::{pwritev2, Errno, ReadWriteFlags};
+
+            let iovs = [IoSlice::new(buf)];
+            match pwritev2(self, &iovs, 0, ReadWriteFlags::APPEND) {
+                Err(Errno::NOSYS) => {}
+                otherwise => return Ok(otherwise?),
+            }
+        }
+
+        // Otherwise use `F_SETFL` to switch the file description to append
+        // mode, do the write, and switch back. This is not atomic with
+        // respect to other users of the file description, but this is
+        // possibility is documented in the trait.
+        //
+        // Optimization idea: some users don't care about the current position,
+        // changing, so perhaps we could add a `append_relaxed` etc. API which
+        // doesn't preserve positions.
+        let old_flags = fcntl_getfl(self)?;
+        let old_pos = tell(self)?;
+        fcntl_setfl(self, old_flags | OFlags::APPEND)?;
+        let result = write(self, buf);
+        fcntl_setfl(self, old_flags).unwrap();
+        seek(self, std::io::SeekFrom::Start(old_pos)).unwrap();
+        Ok(result?)
+    }
+
+    fn append_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
+        use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags};
+        use rustix::io::writev;
+
+        // On Linux, use `pwritev2`.
+        #[cfg(any(target_os = "android", target_os = "linux"))]
+        {
+            use rustix::io::{pwritev2, Errno, ReadWriteFlags};
+
+            match pwritev2(self, bufs, 0, ReadWriteFlags::APPEND) {
+                Err(Errno::NOSYS) => {}
+                otherwise => return Ok(otherwise?),
+            }
+        }
+
+        // Otherwise use `F_SETFL` to switch the file description to append
+        // mode, do the write, and switch back. This is not atomic with
+        // respect to other users of the file description, but this is
+        // possibility is documented in the trait.
+        let old_flags = fcntl_getfl(self)?;
+        let old_pos = tell(self)?;
+        fcntl_setfl(self, old_flags | OFlags::APPEND)?;
+        let result = writev(self, bufs);
+        fcntl_setfl(self, old_flags).unwrap();
+        seek(self, std::io::SeekFrom::Start(old_pos)).unwrap();
+        Ok(result?)
+    }
+
+    #[inline]
+    fn is_append_vectored(&self) -> bool {
+        true
+    }
+
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
         Seek::seek(&mut &*self.as_filelike_view::<std::fs::File>(), pos)
@@ -466,6 +620,10 @@ impl FileIoExt for std::fs::File {
     fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
         // Windows' `seek_read` modifies the current position in the file, so
         // re-open the file to leave the original open file unmodified.
+        //
+        // Optimization idea: some users don't care about the current position,
+        // changing, so perhaps we could add a `read_at_relaxed` etc. API which
+        // doesn't do the `reopen`.
         let reopened = reopen(self)?;
         reopened.seek_read(buf, offset)
     }
@@ -600,6 +758,23 @@ impl FileIoExt for std::fs::File {
         true
     }
 
+    fn append(&self, buf: &[u8]) -> io::Result<usize> {
+        // Re-open the file for appending.
+        let reopened = reopen_append(self)?;
+        reopened.write(buf)
+    }
+
+    fn append_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
+        // Re-open the file for appending.
+        let reopened = reopen_append(self)?;
+        reopened.write_vectored(bufs)
+    }
+
+    #[inline]
+    fn is_append_vectored(&self) -> bool {
+        true
+    }
+
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
         Seek::seek(&mut &*self.as_filelike_view::<std::fs::File>(), pos)
@@ -703,6 +878,20 @@ impl FileIoExt for cap_std::fs::File {
             .is_write_vectored_at()
     }
 
+    fn append(&self, buf: &[u8]) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>().append(buf)
+    }
+
+    fn append_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .append_vectored(bufs)
+    }
+
+    #[inline]
+    fn is_append_vectored(&self) -> bool {
+        true
+    }
+
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
         self.as_filelike_view::<std::fs::File>().seek(pos)
@@ -801,6 +990,20 @@ impl FileIoExt for cap_std::fs_utf8::File {
             .is_write_vectored_at()
     }
 
+    fn append(&self, buf: &[u8]) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>().append(buf)
+    }
+
+    fn append_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
+        self.as_filelike_view::<std::fs::File>()
+            .append_vectored(bufs)
+    }
+
+    #[inline]
+    fn is_append_vectored(&self) -> bool {
+        true
+    }
+
     #[inline]
     fn seek(&self, pos: SeekFrom) -> io::Result<u64> {
         self.as_filelike_view::<std::fs::File>().seek(pos)
@@ -836,6 +1039,18 @@ unsafe fn _reopen_write(file: &fs::File) -> io::Result<fs::File> {
     file.reopen(cap_fs_ext::OpenOptions::new().write(true))
 }
 
+#[cfg(windows)]
+#[inline]
+fn reopen_append<Filelike: AsFilelike>(filelike: &Filelike) -> io::Result<fs::File> {
+    let file = filelike.as_filelike_view::<std::fs::File>();
+    unsafe { _reopen_append(&file) }
+}
+
+#[cfg(windows)]
+unsafe fn _reopen_append(file: &fs::File) -> io::Result<fs::File> {
+    file.reopen(cap_fs_ext::OpenOptions::new().append(true))
+}
+
 fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::Result<usize> {
     let len = match file.metadata()?.len().checked_sub(offset) {
         None => return Ok(0),
@@ -843,7 +1058,7 @@ fn read_to_end_at(file: &std::fs::File, buf: &mut Vec<u8>, offset: u64) -> io::R
     };
 
     // This initializes the buffer with zeros which is theoretically
-    // unnecesary, but current alternatives involve tricky `unsafe` code.
+    // unnecessary, but current alternatives involve tricky `unsafe` code.
     buf.resize(
         (buf.len() as u64)
             .saturating_add(len)
@@ -862,7 +1077,7 @@ fn read_to_string_at(file: &std::fs::File, buf: &mut String, offset: u64) -> io:
     };
 
     // This temporary buffer is theoretically unnecessary, but eliminating it
-    // curently involves a bunch of `unsafe`.
+    // currently involves a bunch of `unsafe`.
     let mut tmp = vec![0_u8; len.try_into().unwrap_or(usize::MAX)];
     FileIoExt::read_exact_at(file, &mut tmp, offset)?;
     let s = String::from_utf8(tmp).map_err(|_| {
