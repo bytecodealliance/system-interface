@@ -304,6 +304,32 @@ fn cap_write_all_vectored_at() {
     assert_eq!(back, "abcdEFGHIJKLMNOPQRSTuvwxyz");
 }
 
+#[cfg(any(not(windows), feature = "cap_std_impls"))]
+#[test]
+fn cap_write_all_vectored_after_end() {
+    let tmpdir = tmpdir();
+    let file = check!(tmpdir.open_with(
+        "file",
+        cap_std::fs::OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+    ));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
+    let buf0 = b"EFGHIJKL".to_vec();
+    let buf1 = b"MNOPQRST".to_vec();
+    let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
+    check!(file.write_all_vectored_at(&mut bufs, 32));
+    assert_eq!(check!(file.stream_position()), 26);
+    let mut back = String::new();
+    check!(file.seek(std::io::SeekFrom::Start(0)));
+    check!(file.read_to_string(&mut back));
+    assert_eq!(
+        back,
+        "abcdefghijklmnopqrstuvwxyz\0\0\0\0\0\0EFGHIJKLMNOPQRST"
+    );
+}
+
 #[test]
 fn write_all_vectored_at() {
     let dir = tempfile::tempdir().unwrap();
@@ -322,6 +348,29 @@ fn write_all_vectored_at() {
     check!(file.seek(std::io::SeekFrom::Start(0)));
     check!(file.read_to_string(&mut back));
     assert_eq!(back, "abcdEFGHIJKLMNOPQRSTuvwxyz");
+}
+
+#[test]
+fn write_all_vectored_after_end() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = check!(OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(dir.path().join("file")));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
+    let buf0 = b"EFGHIJKL".to_vec();
+    let buf1 = b"MNOPQRST".to_vec();
+    let mut bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
+    check!(file.write_all_vectored_at(&mut bufs, 32));
+    assert_eq!(check!(file.stream_position()), 26);
+    let mut back = String::new();
+    check!(file.seek(std::io::SeekFrom::Start(0)));
+    check!(file.read_to_string(&mut back));
+    assert_eq!(
+        back,
+        "abcdefghijklmnopqrstuvwxyz\0\0\0\0\0\0EFGHIJKLMNOPQRST"
+    );
 }
 
 #[test]
@@ -351,6 +400,33 @@ fn write_vectored_at() {
 }
 
 #[test]
+fn write_vectored_after_end() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = check!(OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(dir.path().join("file")));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
+    let buf0 = b"EFGHIJKL".to_vec();
+    let buf1 = b"MNOPQRST".to_vec();
+    let bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
+    let nwritten = check!(file.write_vectored_at(&bufs, 32));
+    assert_eq!(check!(file.stream_position()), 26);
+    let mut back = String::new();
+    check!(file.seek(std::io::SeekFrom::Start(0)));
+    check!(file.read_to_string(&mut back));
+    assert_eq!(&back[..26], "abcdefghijklmnopqrstuvwxyz");
+    if nwritten >= 8 {
+        assert_eq!(&back[26..40], "\0\0\0\0\0\0EFGHIJKL");
+    }
+    if nwritten == 16 {
+        assert_eq!(&back[26..], "\0\0\0\0\0\0EFGHIJKLMNOPQRST");
+    }
+    assert!(nwritten <= 16);
+}
+
+#[test]
 fn write_all_at() {
     let dir = tempfile::tempdir().unwrap();
     let file = check!(OpenOptions::new()
@@ -368,6 +444,29 @@ fn write_all_at() {
     check!(file.seek(std::io::SeekFrom::Start(0)));
     check!(file.read_to_string(&mut back));
     assert_eq!(back, "abcdEFGHIJKLMNOPQRSTuvwxyz");
+}
+
+#[test]
+fn write_all_after_end() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = check!(OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(dir.path().join("file")));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
+    let buf0 = b"EFGHIJKL".to_vec();
+    let buf1 = b"MNOPQRST".to_vec();
+    check!(file.write_all_at(&buf0, 32));
+    check!(file.write_all_at(&buf1, 40));
+    assert_eq!(check!(file.stream_position()), 26);
+    let mut back = String::new();
+    check!(file.seek(std::io::SeekFrom::Start(0)));
+    check!(file.read_to_string(&mut back));
+    assert_eq!(
+        back,
+        "abcdefghijklmnopqrstuvwxyz\0\0\0\0\0\0EFGHIJKLMNOPQRST"
+    );
 }
 
 #[test]
@@ -456,6 +555,41 @@ fn write_at() {
         } else {
             assert_eq!(&back.as_bytes()[0..4 + nwritten0], b"abcdEFGHIJKL");
         }
+    }
+    assert!(nwritten0 <= 8);
+    assert!(nwritten1 <= 8);
+}
+
+#[test]
+fn write_after_end() {
+    let dir = tempfile::tempdir().unwrap();
+    let file = check!(OpenOptions::new()
+        .create_new(true)
+        .read(true)
+        .write(true)
+        .open(dir.path().join("file")));
+    check!(write!(&file, "abcdefghijklmnopqrstuvwxyz"));
+    let buf0 = b"EFGHIJKL".to_vec();
+    let buf1 = b"MNOPQRST".to_vec();
+    let nwritten0 = check!(file.write_at(&buf0, 32));
+    let nwritten1 = check!(file.write_at(&buf1, 40));
+    assert_eq!(check!(file.stream_position()), 26);
+    let mut back = String::new();
+    check!(file.seek(std::io::SeekFrom::Start(0)));
+    check!(file.read_to_string(&mut back));
+    assert_eq!(&back[..26], "abcdefghijklmnopqrstuvwxyz");
+    if nwritten0 > 0 {
+        assert_eq!(
+            &back[26..26 + 6 + nwritten0],
+            &"\0\0\0\0\0\0EFGHIJKL"[..6 + nwritten0]
+        );
+    }
+    if nwritten1 > 0 {
+        assert_eq!(&back[26..26 + 6], "\0\0\0\0\0\0");
+        assert_eq!(
+            &back[26 + 6 + 8..26 + 6 + 8 + nwritten1],
+            &"MNOPQRST"[..nwritten1]
+        );
     }
     assert!(nwritten0 <= 8);
     assert!(nwritten1 <= 8);

@@ -26,7 +26,7 @@ use std::convert::TryInto;
 use std::io::{self, IoSlice, IoSliceMut, Seek, SeekFrom};
 use std::slice;
 #[cfg(windows)]
-use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt};
+use {cap_fs_ext::Reopen, fd_lock::RwLock, std::fs, std::os::windows::fs::FileExt};
 #[cfg(not(windows))]
 use {rustix::fs::tell, rustix::fs::FileExt};
 
@@ -170,6 +170,9 @@ pub trait FileIoExt: IoExt {
     /// takes `self` by immutable reference since the entire side effect is
     /// I/O, and it's supported on non-Unix platforms including Windows.
     ///
+    /// A write past the end of the file extends the file with zero bytes until
+    /// the point where the write starts.
+    ///
     /// Contrary to POSIX, on many popular platforms including Linux and
     /// FreeBSD, if the file is opened in append mode, this ignores the offset
     /// appends the data to the end of the file.
@@ -182,6 +185,9 @@ pub trait FileIoExt: IoExt {
     /// This is similar to [`std::os::unix::fs::FileExt::write_all_at`], except
     /// it takes `self` by immutable reference since the entire side effect is
     /// I/O, and it's supported on non-Unix platforms including Windows.
+    ///
+    /// A write past the end of the file extends the file with zero bytes until
+    /// the point where the write starts.
     ///
     /// Contrary to POSIX, on many popular platforms including Linux and
     /// FreeBSD, if the file is opened in append mode, this ignores the offset
@@ -698,14 +704,49 @@ impl FileIoExt for std::fs::File {
     fn write_at(&self, buf: &[u8], offset: u64) -> io::Result<usize> {
         // Windows' `seek_write` modifies the current position in the file, so
         // re-open the file to leave the original open file unmodified.
+        //
+        // We take a lock so that we can test for writing past the end of the
+        // file and implement writing zeros if the offset is past the end.
+        //
+        // Windows documentation [says]:
+        //
+        // > A write operation increases the size of the file to the file
+        // > pointer position plus the size of the buffer written, which results
+        // > in the intervening bytes uninitialized.
+        //
+        // [says]: https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-setfilepointer#remarks
+        //
+        // However, our desired behavior is to fill the intervening bytes with
+        // zeros, so we do it ourselves.
         let reopened = reopen_write(self)?;
-        reopened.seek_write(buf, offset)
+        let mut reopened = RwLock::new(reopened);
+        let reopened = reopened.write()?;
+        let mut seek_offset = offset;
+        let mut write_buf = buf;
+        let mut prepend_zeros;
+        let reopened_size = reopened.metadata()?.len();
+        let num_zeros = offset.saturating_sub(reopened_size);
+        let num_zeros: usize = num_zeros
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::OutOfMemory, "write_all_vectored_at"))?;
+        if num_zeros > 0 {
+            prepend_zeros = vec![0_u8; num_zeros];
+            prepend_zeros.extend_from_slice(buf);
+            seek_offset = reopened_size;
+            write_buf = &prepend_zeros;
+        }
+        let num_written = reopened
+            .seek_write(write_buf, seek_offset)?
+            .saturating_sub(num_zeros);
+        Ok(num_written)
     }
 
     #[inline]
     fn write_all_at(&self, buf: &[u8], offset: u64) -> io::Result<()> {
         // Similar to `read_exact_at`, re-open the file so that we can do a seek and
         // leave the original file unmodified.
+        //
+        // Similar to `write_at`, we take a lock to do this.
         let reopened = loop {
             match reopen_write(self) {
                 Ok(file) => break file,
@@ -713,29 +754,71 @@ impl FileIoExt for std::fs::File {
                 Err(err) => return Err(err),
             }
         };
+        let mut reopened = RwLock::new(reopened);
+        let reopened = reopened.write()?;
+        let mut seek_offset = offset;
+        let mut write_buf = buf;
+        let mut prepend_zeros;
+        let reopened_size = reopened.metadata()?.len();
+        let num_zeros = offset.saturating_sub(reopened_size);
+        let num_zeros: usize = num_zeros
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::OutOfMemory, "write_all_vectored_at"))?;
+        if num_zeros > 0 {
+            prepend_zeros = vec![0_u8; num_zeros];
+            prepend_zeros.extend_from_slice(buf);
+            seek_offset = reopened_size;
+            write_buf = &prepend_zeros;
+        }
         loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
+            match reopened.seek(SeekFrom::Start(seek_offset)) {
                 Ok(_) => break,
                 Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
                 Err(err) => return Err(err),
             }
         }
-        reopened.write_all(buf)
+        reopened.write_all(write_buf)?;
+        Ok(())
     }
 
     #[inline]
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
         // Similar to `read_vectored_at`, re-open the file to avoid adjusting
         // the current position of the already-open file.
+        //
+        // Similar to `write_at`, we take a lock to do this.
         let reopened = reopen_write(self)?;
-        reopened.seek(SeekFrom::Start(offset))?;
-        reopened.write_vectored(bufs)
+        let mut reopened = RwLock::new(reopened);
+        let reopened = reopened.write()?;
+        let mut seek_offset = offset;
+        let mut write_bufs = bufs;
+        let zeros;
+        let mut prepend_zeros;
+        let reopened_size = reopened.metadata()?.len();
+        let num_zeros = offset.saturating_sub(reopened_size);
+        let num_zeros: usize = num_zeros
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::OutOfMemory, "write_vectored_at"))?;
+        if num_zeros > 0 {
+            zeros = vec![0_u8; num_zeros];
+            prepend_zeros = vec![IoSlice::new(&zeros)];
+            prepend_zeros.extend_from_slice(bufs);
+            seek_offset = reopened_size;
+            write_bufs = &prepend_zeros;
+        }
+        reopened.seek(SeekFrom::Start(seek_offset))?;
+        let num_written = reopened
+            .write_vectored(write_bufs)?
+            .saturating_sub(num_zeros);
+        Ok(num_written)
     }
 
     #[inline]
     fn write_all_vectored_at(&self, bufs: &mut [IoSlice], offset: u64) -> io::Result<()> {
         // Similar to `read_vectored_at`, re-open the file to avoid adjusting
         // the current position of the already-open file.
+        //
+        // Similar to `write_at`, we take a lock to do this.
         let reopened = loop {
             match reopen_write(self) {
                 Ok(file) => break file,
@@ -743,14 +826,24 @@ impl FileIoExt for std::fs::File {
                 Err(err) => return Err(err),
             }
         };
-        loop {
-            match reopened.seek(SeekFrom::Start(offset)) {
-                Ok(_) => break,
-                Err(err) if err.kind() == io::ErrorKind::Interrupted => continue,
-                Err(err) => return Err(err),
-            }
+        let mut reopened = RwLock::new(reopened);
+        let reopened = reopened.write()?;
+        let reopened_size = reopened.metadata()?.len();
+        let num_zeros = offset.saturating_sub(reopened_size);
+        let num_zeros: usize = num_zeros
+            .try_into()
+            .map_err(|_| io::Error::new(io::ErrorKind::OutOfMemory, "write_vectored_at"))?;
+        if num_zeros > 0 {
+            let zeros = vec![0_u8; num_zeros];
+            let mut prepend_zeros = vec![IoSlice::new(&zeros)];
+            prepend_zeros.extend_from_slice(bufs);
+            reopened.seek(SeekFrom::Start(reopened_size))?;
+            reopened.write_all_vectored(&mut prepend_zeros)?;
+        } else {
+            reopened.seek(SeekFrom::Start(offset))?;
+            reopened.write_all_vectored(bufs)?;
         }
-        reopened.write_all_vectored(bufs)
+        Ok(())
     }
 
     #[inline]
