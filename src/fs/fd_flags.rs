@@ -164,9 +164,9 @@ impl<T> GetSetFdFlags for T {
         }
 
         if mode.contains(FileModeInformation::FILE_WRITE_THROUGH) {
-            // Only report `SYNC`. This is technically the only one of the
+            // Only report `DSYNC`. This is technically the only one of the
             // `O_?SYNC` flags Windows supports.
-            fd_flags |= FdFlags::SYNC;
+            fd_flags |= FdFlags::DSYNC;
         }
 
         Ok(fd_flags)
@@ -178,18 +178,8 @@ impl<T> GetSetFdFlags for T {
     {
         let mut flags = 0;
 
-        if fd_flags.contains(FdFlags::SYNC)
-            || fd_flags.contains(FdFlags::DSYNC)
-            || fd_flags.contains(FdFlags::RSYNC)
-        {
+        if fd_flags.contains(FdFlags::SYNC) || fd_flags.contains(FdFlags::DSYNC) {
             flags |= FILE_FLAG_WRITE_THROUGH;
-        }
-
-        if fd_flags.contains(FdFlags::NONBLOCK) {
-            return Err(io::Error::new(
-                io::ErrorKind::Other,
-                "Non-blocking I/O is not yet supported on Windows",
-            ));
         }
 
         let file = self.as_filelike_view::<fs::File>();
