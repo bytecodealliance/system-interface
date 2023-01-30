@@ -536,7 +536,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
 
             let iovs = [IoSlice::new(buf)];
             match pwritev2(self, &iovs, 0, ReadWriteFlags::APPEND) {
-                Err(Errno::NOSYS) => {}
+                Err(Errno::NOSYS) | Err(Errno::NOTSUP) => {}
                 otherwise => return Ok(otherwise?),
             }
         }
@@ -568,7 +568,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
             use rustix::io::{pwritev2, Errno, ReadWriteFlags};
 
             match pwritev2(self, bufs, 0, ReadWriteFlags::APPEND) {
-                Err(Errno::NOSYS) => {}
+                Err(Errno::NOSYS) | Err(Errno::NOTSUP) => {}
                 otherwise => return Ok(otherwise?),
             }
         }
