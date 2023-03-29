@@ -527,7 +527,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
 
     fn append(&self, buf: &[u8]) -> io::Result<usize> {
         use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags};
-        use rustix::io::write;
+        use rustix::io::{write, SeekFrom};
 
         // On Linux, use `pwritev2`.
         #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -554,13 +554,13 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         fcntl_setfl(self, old_flags | OFlags::APPEND)?;
         let result = write(self, buf);
         fcntl_setfl(self, old_flags).unwrap();
-        seek(self, std::io::SeekFrom::Start(old_pos)).unwrap();
+        seek(self, SeekFrom::Start(old_pos)).unwrap();
         Ok(result?)
     }
 
     fn append_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
         use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags};
-        use rustix::io::writev;
+        use rustix::io::{writev, SeekFrom};
 
         // On Linux, use `pwritev2`.
         #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -582,7 +582,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         fcntl_setfl(self, old_flags | OFlags::APPEND)?;
         let result = writev(self, bufs);
         fcntl_setfl(self, old_flags).unwrap();
-        seek(self, std::io::SeekFrom::Start(old_pos)).unwrap();
+        seek(self, SeekFrom::Start(old_pos)).unwrap();
         Ok(result?)
     }
 
