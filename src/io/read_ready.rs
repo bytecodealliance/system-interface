@@ -1,6 +1,8 @@
+use crate::io::IsReadWrite;
+use io_lifetimes::raw::{AsRawFilelike, FromRawFilelike};
 #[cfg(not(any(windows, target_os = "redox")))]
 use rustix::io::ioctl_fionread;
-use std::io::{self, Stdin, StdinLock};
+use std::io::{self, Seek, SeekFrom, Stdin, StdinLock};
 #[cfg(not(target_os = "redox"))]
 use std::net;
 use std::process::{ChildStderr, ChildStdout};
@@ -56,6 +58,40 @@ impl<'a> ReadReady for StdinLock<'a> {
     fn num_ready_bytes(&self) -> io::Result<u64> {
         // Return the conservatively correct result.
         Ok(0)
+    }
+}
+
+impl crate::io::ReadReady for std::fs::File {
+    #[inline]
+    fn num_ready_bytes(&self) -> std::io::Result<u64> {
+        let (read, _write) = self.is_read_write()?;
+        if read {
+            // If it's a file, we can query how many bytes are left.
+            let metadata = self.metadata()?;
+            if metadata.is_file() {
+                // When `File::tell` is stable use that, but for now, create a
+                // temporary `File` so that we can get a `&mut File` and call
+                // `seek` on it.
+                let mut tmp = unsafe { std::fs::File::from_raw_filelike(self.as_raw_filelike()) };
+                let current = tmp.seek(SeekFrom::Current(0));
+                std::mem::forget(tmp);
+                return Ok(metadata.len() - current?);
+            }
+
+            // Otherwise, try our luck with `FIONREAD`.
+            #[cfg(unix)]
+            if let Ok(n) = ioctl_fionread(self) {
+                return Ok(n);
+            }
+
+            // It's something without a specific length that we can't query,
+            // so return the conservatively correct answer.
+            return Ok(0);
+        }
+        Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "stream is not readable",
+        ))
     }
 }
 
