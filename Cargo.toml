@@ -12,22 +12,22 @@ exclude = ["/.github"]
 
 [dependencies]
 #async-std = { version = "1.10.0", optional = true }
-bitflags = "1.2.1"
+bitflags = "2.2.3"
 cap-std = { version = "1.0.0", optional = true }
 #cap-async-std = { version = "0.26.0", optional = true }
 char-device = { version = "0.16.0", optional = true }
 os_pipe = { version = "1.0.0", features = ["io_safety"], optional = true }
 socketpair = { version = "0.19.0", optional = true }
-io-lifetimes = { version = "1.0.0", default-features = false }
+io-lifetimes = { version = "2.0.0", default-features = false }
 ssh2 = { version = "0.9.1", optional = true }
 #socket2 = { version = "0.4.0", optional = true }
 
 [target.'cfg(not(windows))'.dependencies]
-rustix = { version = "0.37.0", features = ["fs", "net"] }
+rustix = { version = "0.38.0", features = ["fs", "net"] }
 
 [target.'cfg(windows)'.dependencies]
 cap-fs-ext = "1.0.0"
-winx = "0.35.0"
+winx = "0.36.0"
 fd-lock = "3.0.8"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
