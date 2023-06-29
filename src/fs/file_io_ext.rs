@@ -526,8 +526,8 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
     }
 
     fn append(&self, buf: &[u8]) -> io::Result<usize> {
-        use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags};
-        use rustix::io::{write, SeekFrom};
+        use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags, SeekFrom};
+        use rustix::io::write;
 
         // On Linux, use `pwritev2`.
         #[cfg(any(target_os = "android", target_os = "linux"))]
@@ -559,8 +559,8 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
     }
 
     fn append_vectored(&self, bufs: &[IoSlice]) -> io::Result<usize> {
-        use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags};
-        use rustix::io::{writev, SeekFrom};
+        use rustix::fs::{fcntl_getfl, fcntl_setfl, seek, OFlags, SeekFrom};
+        use rustix::io::writev;
 
         // On Linux, use `pwritev2`.
         #[cfg(any(target_os = "android", target_os = "linux"))]
