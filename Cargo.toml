@@ -28,7 +28,7 @@ rustix = { version = "0.38.0", features = ["fs", "net"] }
 [target.'cfg(windows)'.dependencies]
 cap-fs-ext = "1.0.0"
 winx = "0.36.0"
-fd-lock = "3.0.8"
+fd-lock = "4.0.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 version = "0.48.0"
