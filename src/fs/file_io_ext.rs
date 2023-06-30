@@ -22,7 +22,6 @@ use rustix::fs::fcntl_rdadvise;
 use rustix::fs::{fallocate, FallocateFlags};
 #[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
 use rustix::io::{preadv, pwritev};
-use std::convert::TryInto;
 use std::io::{self, IoSlice, IoSliceMut, Seek, SeekFrom};
 use std::slice;
 #[cfg(windows)]
