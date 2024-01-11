@@ -8,8 +8,8 @@ use std::{fs, io};
 #[cfg(windows)]
 use {
     cap_fs_ext::{OpenOptions, Reopen},
+    cap_std::fs::OpenOptionsExt,
     io_lifetimes::AsHandle,
-    std::os::windows::fs::OpenOptionsExt,
     windows_sys::Win32::Storage::FileSystem::FILE_FLAG_WRITE_THROUGH,
     winx::file::{AccessMode, FileModeInformation},
 };
