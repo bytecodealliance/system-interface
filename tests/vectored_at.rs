@@ -412,6 +412,7 @@ fn write_vectored_after_end() {
     let buf1 = b"MNOPQRST".to_vec();
     let bufs = vec![IoSlice::new(&buf0), IoSlice::new(&buf1)];
     let nwritten = check!(file.write_vectored_at(&bufs, 32));
+    assert!(nwritten > 0);
     assert_eq!(check!(file.stream_position()), 26);
     let mut back = String::new();
     check!(file.seek(std::io::SeekFrom::Start(0)));
