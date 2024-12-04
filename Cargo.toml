@@ -32,7 +32,7 @@ winx = "0.36.0"
 fd-lock = "4.0.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.52.0"
+version = ">=0.52, <=0.59"
 features = [
     "Win32_Foundation",
     "Win32_Networking_WinSock",
