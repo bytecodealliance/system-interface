@@ -163,7 +163,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        build: [stable, windows, macos, macos-14, beta, ubuntu-22.04, windows-2019, aarch64-ubuntu]
+        build: [stable, windows, macos, macos-14, beta, ubuntu-22.04, windows-2022, aarch64-ubuntu]
         include:
           - build: stable
             os: ubuntu-latest
@@ -183,8 +183,8 @@ jobs:
           - build: ubuntu-22.04
             os: ubuntu-22.04
             rust: stable
-          - build: windows-2019
-            os: windows-2019
+          - build: windows-2022
+            os: windows-2022
             rust: stable
           - build: aarch64-ubuntu
             os: ubuntu-latest
