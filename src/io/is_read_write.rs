@@ -52,37 +52,6 @@ impl IsReadWrite for cap_std::fs_utf8::File {
     }
 }
 
-#[cfg(all(windows, feature = "async-std"))]
-impl IsReadWrite for async_std::fs::File {
-    #[inline]
-    fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        use io_lifetimes::AsFilelike;
-        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
-    }
-}
-
-#[cfg(all(windows, feature = "async-std"))]
-impl IsReadWrite for cap_async_std::fs::File {
-    #[inline]
-    fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        use io_lifetimes::AsFilelike;
-        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
-    }
-}
-
-#[cfg(all(
-    windows,
-    feature = "async-std",
-    feature = "cap_async_std_impls_fs_utf8"
-))]
-impl IsReadWrite for cap_async_std::fs_utf8::File {
-    #[inline]
-    fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        use io_lifetimes::AsFilelike;
-        file_is_read_write(&self.as_filelike_view::<std::fs::File>())
-    }
-}
-
 #[cfg(windows)]
 impl IsReadWrite for std::net::TcpStream {
     #[inline]
@@ -93,22 +62,6 @@ impl IsReadWrite for std::net::TcpStream {
 
 #[cfg(all(windows, feature = "cap_std_impls"))]
 impl IsReadWrite for cap_std::net::TcpStream {
-    #[inline]
-    fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        raw_socket_is_read_write(self.as_raw_socket())
-    }
-}
-
-#[cfg(all(windows, feature = "cap_async_std_impls"))]
-impl IsReadWrite for async_std::net::TcpStream {
-    #[inline]
-    fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        raw_socket_is_read_write(self.as_raw_socket())
-    }
-}
-
-#[cfg(all(windows, feature = "cap_async_std_impls"))]
-impl IsReadWrite for cap_async_std::net::TcpStream {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
         raw_socket_is_read_write(self.as_raw_socket())

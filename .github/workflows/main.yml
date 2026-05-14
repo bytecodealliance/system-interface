@@ -136,8 +136,7 @@ jobs:
     # test it on nightly which has the new name.
     - run: cargo check --workspace --bins --examples --tests --features=cap_std_impls --release -vv --target=x86_64-unknown-fuchsia
 
-    # socket2, cap_async_std_impls, and cap_async_std_impls_fs_utf8 temporarily
-    # disabled until I/O safety trait impls are available
+    # socket2 temporarily disabled until I/O safety trait impls are available
     - run: cargo check --workspace --all-targets --all-features --release -vv
     - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-unknown-linux-musl
     - run: cargo check --workspace --all-targets --features=cap_std_impls,cap_std_impls_fs_utf8,char-device,use_os_pipe,socketpair --release -vv --target=x86_64-unknown-linux-gnux32
