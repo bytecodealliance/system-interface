@@ -538,7 +538,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         use rustix::io::write;
 
         // On Linux, use `pwritev2`.
-        #[cfg(any(target_os = "android", target_os = "linux"))]
+        #[cfg(target_os = "linux")]
         {
             use rustix::io::{pwritev2, Errno, ReadWriteFlags};
 
@@ -571,7 +571,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         use rustix::io::writev;
 
         // On Linux, use `pwritev2`.
-        #[cfg(any(target_os = "android", target_os = "linux"))]
+        #[cfg(target_os = "linux")]
         {
             use rustix::io::{pwritev2, Errno, ReadWriteFlags};
 
