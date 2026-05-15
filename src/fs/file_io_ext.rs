@@ -23,6 +23,15 @@ use rustix::fs::{fallocate, FallocateFlags};
 #[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
 use rustix::io::{preadv, pwritev};
 use std::io::{self, IoSlice, IoSliceMut, Seek, SeekFrom};
+#[cfg(not(any(
+    windows,
+    target_os = "ios",
+    target_os = "macos",
+    target_os = "netbsd",
+    target_os = "openbsd",
+    target_os = "redox",
+)))]
+use std::num::NonZeroU64;
 use std::slice;
 #[cfg(windows)]
 use {cap_fs_ext::Reopen, std::fs, std::os::windows::fs::FileExt};
@@ -420,7 +429,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
             Advice::Random => rustix::fs::Advice::Random,
             Advice::DontNeed => rustix::fs::Advice::DontNeed,
         };
-        Ok(fadvise(self, offset, len, advice)?)
+        Ok(fadvise(self, offset, NonZeroU64::new(len), advice)?)
     }
 
     #[cfg(any(target_os = "ios", target_os = "macos"))]
@@ -529,7 +538,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         use rustix::io::write;
 
         // On Linux, use `pwritev2`.
-        #[cfg(any(target_os = "android", target_os = "linux"))]
+        #[cfg(target_os = "linux")]
         {
             use rustix::io::{pwritev2, Errno, ReadWriteFlags};
 
@@ -562,7 +571,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         use rustix::io::writev;
 
         // On Linux, use `pwritev2`.
-        #[cfg(any(target_os = "android", target_os = "linux"))]
+        #[cfg(target_os = "linux")]
         {
             use rustix::io::{pwritev2, Errno, ReadWriteFlags};
 

@@ -1,6 +1,13 @@
 use std::io;
 #[cfg(not(windows))]
-use {io_lifetimes::AsFilelike, rustix::io::is_read_write};
+use {
+    io_lifetimes::AsFilelike,
+    rustix::{
+        fs::{fcntl_getfl, OFlags},
+        io::Errno,
+        net::{recv, send, RecvFlags, SendFlags},
+    },
+};
 #[cfg(windows)]
 use {
     std::{
@@ -22,7 +29,60 @@ pub trait IsReadWrite {
 impl<T: AsFilelike> IsReadWrite for T {
     #[inline]
     fn is_read_write(&self) -> io::Result<(bool, bool)> {
-        Ok(is_read_write(self)?)
+        is_read_write(self)
+    }
+}
+
+#[cfg(not(windows))]
+#[inline]
+fn is_read_write<Fd: AsFilelike>(fd: Fd) -> io::Result<(bool, bool)> {
+    let (mut read, mut write) = is_file_read_write(&fd)?;
+    let mut not_socket = false;
+
+    if read {
+        let mut buf = [0_u8; 1];
+        match recv(&fd, &mut buf, RecvFlags::PEEK | RecvFlags::DONTWAIT) {
+            Ok((0, _)) => read = false,
+            Ok(_) => (),
+            Err(err) if err == Errno::AGAIN || err == Errno::WOULDBLOCK => (),
+            Err(Errno::NOTSOCK) => not_socket = true,
+            Err(err) => return Err(err.into()),
+        }
+    }
+
+    if write && !not_socket {
+        match send(&fd, &[], SendFlags::DONTWAIT) {
+            Ok(_) => (),
+            Err(err)
+                if err == Errno::AGAIN || err == Errno::WOULDBLOCK || err == Errno::NOTSOCK => {}
+            Err(Errno::PIPE) => write = false,
+            Err(err) => return Err(err.into()),
+        }
+    }
+
+    Ok((read, write))
+}
+
+#[cfg(not(windows))]
+#[inline]
+fn is_file_read_write<Fd: AsFilelike>(fd: Fd) -> io::Result<(bool, bool)> {
+    let mode = fcntl_getfl(fd)?;
+
+    #[cfg(any(
+        target_os = "android",
+        target_os = "emscripten",
+        target_os = "fuchsia",
+        target_os = "linux"
+    ))]
+    if mode.contains(OFlags::PATH) {
+        return Ok((false, false));
+    }
+
+    match mode & OFlags::RWMODE {
+        OFlags::RDONLY => Ok((true, false)),
+        OFlags::RDWR => Ok((true, true)),
+        OFlags::WRONLY => Ok((false, true)),
+        _ => unreachable!(),
     }
 }
 
