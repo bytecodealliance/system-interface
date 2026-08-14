@@ -4,14 +4,13 @@ use crate::io::IoExt;
 use io_lifetimes::AsFilelike;
 #[cfg(not(any(
     windows,
-    target_os = "ios",
-    target_os = "macos",
+    target_vendor = "apple",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "redox",
 )))]
 use rustix::fs::fadvise;
-#[cfg(any(target_os = "ios", target_os = "macos"))]
+#[cfg(target_vendor = "apple")]
 use rustix::fs::fcntl_rdadvise;
 #[cfg(not(any(
     windows,
@@ -20,7 +19,7 @@ use rustix::fs::fcntl_rdadvise;
     target_os = "openbsd"
 )))]
 use rustix::fs::{fallocate, FallocateFlags};
-#[cfg(not(any(windows, target_os = "ios", target_os = "macos", target_os = "redox")))]
+#[cfg(not(any(windows, target_vendor = "apple", target_os = "redox")))]
 use rustix::io::{preadv, pwritev};
 use std::io::{self, IoSlice, IoSliceMut, Seek, SeekFrom};
 use std::slice;
@@ -32,8 +31,7 @@ use {rustix::fs::tell, rustix::fs::FileExt};
 /// Advice to pass to `FileIoExt::advise`.
 #[cfg(not(any(
     windows,
-    target_os = "ios",
-    target_os = "macos",
+    target_vendor = "apple",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "redox"
@@ -58,8 +56,7 @@ pub enum Advice {
 /// Advice to pass to `FileIoExt::advise`.
 #[cfg(any(
     windows,
-    target_os = "ios",
-    target_os = "macos",
+    target_vendor = "apple",
     target_os = "netbsd",
     target_os = "openbsd",
     target_os = "redox"
@@ -404,8 +401,7 @@ fn advance_mut<'a, 'b>(bufs: &'b mut [IoSliceMut<'a>], n: usize) -> &'b mut [IoS
 #[cfg(not(windows))]
 impl<T: AsFilelike + IoExt> FileIoExt for T {
     #[cfg(not(any(
-        target_os = "ios",
-        target_os = "macos",
+        target_vendor = "apple",
         target_os = "netbsd",
         target_os = "openbsd",
         target_os = "redox"
@@ -423,7 +419,7 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         Ok(fadvise(self, offset, len, advice)?)
     }
 
-    #[cfg(any(target_os = "ios", target_os = "macos"))]
+    #[cfg(target_vendor = "apple")]
     #[inline]
     fn advise(&self, offset: u64, len: u64, advice: Advice) -> io::Result<()> {
         // Darwin lacks `posix_fadvise`, but does have an `fcntl_rdadvise`
@@ -480,13 +476,13 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         FileExt::read_exact_at(&*self.as_filelike_view::<std::fs::File>(), buf, offset)
     }
 
-    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
+    #[cfg(not(any(target_vendor = "apple", target_os = "redox")))]
     #[inline]
     fn read_vectored_at(&self, bufs: &mut [IoSliceMut], offset: u64) -> io::Result<usize> {
         Ok(preadv(self, bufs, offset)?)
     }
 
-    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
+    #[cfg(not(any(target_vendor = "apple", target_os = "redox")))]
     #[inline]
     fn is_read_vectored_at(&self) -> bool {
         true
@@ -512,13 +508,13 @@ impl<T: AsFilelike + IoExt> FileIoExt for T {
         FileExt::write_all_at(&*self.as_filelike_view::<std::fs::File>(), buf, offset)
     }
 
-    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
+    #[cfg(not(any(target_vendor = "apple", target_os = "redox")))]
     #[inline]
     fn write_vectored_at(&self, bufs: &[IoSlice], offset: u64) -> io::Result<usize> {
         Ok(pwritev(self, bufs, offset)?)
     }
 
-    #[cfg(not(any(target_os = "ios", target_os = "macos", target_os = "redox")))]
+    #[cfg(not(any(target_vendor = "apple", target_os = "redox")))]
     #[inline]
     fn is_write_vectored_at(&self) -> bool {
         true
